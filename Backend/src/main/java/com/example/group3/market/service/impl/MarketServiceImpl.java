@@ -3,7 +3,7 @@ package com.example.group3.market.service.impl;
 import com.example.group3.market.dto.HistoryPriceQueryDTO;
 import com.example.group3.market.dto.PriceResponseDTO;
 import com.example.group3.market.entity.PriceSnapshot;
-import com.example.group3.market.provider.MarketDataProvider;
+import com.example.group3.market.provider.FinnhubMarketDataProvider;
 import com.example.group3.market.repository.PriceSnapshotMapper;
 import com.example.group3.market.service.MarketService;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MarketServiceImpl implements MarketService {
 
-    private final MarketDataProvider marketDataProvider;
+    private final FinnhubMarketDataProvider marketDataProvider;
     private final PriceSnapshotMapper priceSnapshotMapper;
 
     @Override

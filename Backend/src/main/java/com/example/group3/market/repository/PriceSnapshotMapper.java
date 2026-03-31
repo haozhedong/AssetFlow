@@ -2,9 +2,7 @@ package com.example.group3.market.repository;
 
 import com.example.group3.market.entity.PriceSnapshot;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
