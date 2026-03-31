@@ -1,14 +1,36 @@
-const kpis = [
-  { label: "Total Market Value", value: "$152,430", color: "#22c55e" },
-  { label: "Total Return", value: "+12.8%", color: "#22c55e" },
-  { label: "Holding Count", value: "18", color: "#e2e8f0" },
-  { label: "Last Update", value: "2026-03-30", color: "#94a3b8" },
-];
+export default function KpiCards({ data }) {
+  if (!data || !data.summary) {
+    return <div style={{ color: "#fff" }}>Loading...</div>;
+  }
 
-export default function KpiCards() {
+  const summary = data.summary;
+
+  const kpis = [
+    {
+      label: "Total Market Value",
+      value: `$${Number(summary.totalMarketValue ?? 0).toLocaleString()}`,
+      color: "#22c55e",
+    },
+    {
+      label: "Total Return",
+      value: `${summary.returnPct ?? 0}%`,
+      color: "#22c55e",
+    },
+    {
+      label: "Holding Count",
+      value: summary.holdingCount ?? 0,
+      color: "#e2e8f0",
+    },
+    {
+      label: "PnL",
+      value: `$${Number(summary.unrealizedPnl ?? 0).toLocaleString()}`,
+      color: "#22c55e",
+    },
+  ];
+
   return (
     <section style={styles.wrapper}>
-      <h2 style={styles.heading}>KPI</h2>
+      <h2 style={styles.heading}>Summary</h2>
 
       <div style={styles.grid}>
         {kpis.map((item) => (

@@ -1,34 +1,13 @@
-const rows = [
-  {
-    symbol: "AAPL",
-    assetName: "Apple Inc.",
-    quantity: 35,
-    currentPrice: "$145.32",
-    marketValue: "$5,086",
-    pnl: "+$886",
-    weight: "3.3%",
-  },
-  {
-    symbol: "QQQ",
-    assetName: "Invesco QQQ ETF",
-    quantity: 18,
-    currentPrice: "$498.20",
-    marketValue: "$8,968",
-    pnl: "+$1,125",
-    weight: "5.9%",
-  },
-  {
-    symbol: "AGG",
-    assetName: "iShares Core Bond",
-    quantity: 42,
-    currentPrice: "$98.12",
-    marketValue: "$4,121",
-    pnl: "+$75",
-    weight: "2.7%",
-  },
-];
+export default function HoldingsTable({ data = [] }) {
+  if (!data.length) {
+    return (
+      <section style={styles.card}>
+        <h2 style={styles.title}>Top Holdings</h2>
+        <div style={styles.empty}>No holdings data</div>
+      </section>
+    );
+  }
 
-export default function HoldingsTable() {
   return (
     <section style={styles.card}>
       <h2 style={styles.title}>Top Holdings</h2>
@@ -40,7 +19,8 @@ export default function HoldingsTable() {
               <th style={styles.th}>Symbol</th>
               <th style={styles.th}>Asset Name</th>
               <th style={styles.th}>Quantity</th>
-              <th style={styles.th}>Current Price</th>
+              <th style={styles.th}>Avg Cost</th>
+              <th style={styles.th}>Latest Price</th>
               <th style={styles.th}>Market Value</th>
               <th style={styles.th}>PnL</th>
               <th style={styles.th}>Weight</th>
@@ -48,17 +28,25 @@ export default function HoldingsTable() {
           </thead>
 
           <tbody>
-            {rows.map((row) => {
-              const isPositive = row.pnl.includes("+");
+            {data.map((row) => {
+              const isPositive = Number(row.unrealizedPnl) >= 0;
 
               return (
-                <tr key={row.symbol} className="table-row">
+                <tr key={row.holdingId ?? row.symbol} className="table-row">
                   <td style={styles.tdSymbol}>{row.symbol}</td>
                   <td style={styles.td}>{row.assetName}</td>
-                  <td style={styles.td}>{row.quantity}</td>
-                  <td style={styles.td}>{row.currentPrice}</td>
-                  <td style={styles.td}>{row.marketValue}</td>
-
+                  <td style={styles.td}>
+                    {Number(row.quantity ?? 0).toFixed(4)}
+                  </td>
+                  <td style={styles.td}>
+                    ${Number(row.averageCost ?? 0).toFixed(4)}
+                  </td>
+                  <td style={styles.td}>
+                    ${Number(row.latestPrice ?? 0).toFixed(4)}
+                  </td>
+                  <td style={styles.td}>
+                    ${Number(row.marketValue ?? 0).toLocaleString()}
+                  </td>
                   <td
                     style={{
                       ...styles.td,
@@ -66,10 +54,11 @@ export default function HoldingsTable() {
                       fontWeight: 700,
                     }}
                   >
-                    {row.pnl}
+                    ${Number(row.unrealizedPnl ?? 0).toLocaleString()}
                   </td>
-
-                  <td style={styles.td}>{row.weight}</td>
+                  <td style={styles.td}>
+                    {Number(row.weightPct ?? 0).toFixed(2)}%
+                  </td>
                 </tr>
               );
             })}
@@ -93,6 +82,11 @@ const styles = {
     marginBottom: "16px",
     color: "#e2e8f0",
     fontSize: "20px",
+  },
+
+  empty: {
+    color: "#94a3b8",
+    fontSize: "14px",
   },
 
   tableWrapper: {
