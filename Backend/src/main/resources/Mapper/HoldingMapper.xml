@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.group3.Holding.Mapper.HoldingMapper">
+
+    <resultMap id="HoldingResultMap" type="com.example.group3.Holding.Entity.Holding">
+        <id property="id" column="id"/>
+        <result property="assetId" column="asset_id"/>
+        <result property="quantity" column="quantity"/>
+        <result property="averageCost" column="average_cost"/>
+        <result property="costCurrency" column="cost_currency"/>
+        <result property="purchaseDate" column="purchase_date"/>
+        <result property="accountName" column="account_name"/>
+        <result property="notes" column="notes"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="HoldingResultMap">
+        SELECT
+            id,
+            asset_id,
+            quantity,
+            average_cost,
+            cost_currency,
+            purchase_date,
+            account_name,
+            notes,
+            created_at,
+            updated_at
+        FROM holdings
+        ORDER BY id ASC
+    </select>
+
+    <select id="findById" parameterType="long" resultMap="HoldingResultMap">
+        SELECT
+            id,
+            asset_id,
+            quantity,
+            average_cost,
+            cost_currency,
+            purchase_date,
+            account_name,
+            notes,
+            created_at,
+            updated_at
+        FROM holdings
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert"
+            parameterType="com.example.group3.Holding.Entity.Holding"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO holdings (
+            asset_id,
+            quantity,
+            average_cost,
+            cost_currency,
+            purchase_date,
+            account_name,
+            notes
+        ) VALUES (
+                     #{assetId},
+                     #{quantity},
+                     #{averageCost},
+                     #{costCurrency},
+                     #{purchaseDate},
+                     #{accountName},
+                     #{notes}
+                 )
+    </insert>
+
+    <update id="updateById"
+            parameterType="com.example.group3.Holding.Entity.Holding">
+        UPDATE holdings
+        SET
+            asset_id = #{assetId},
+            quantity = #{quantity},
+            average_cost = #{averageCost},
+            cost_currency = #{costCurrency},
+            purchase_date = #{purchaseDate},
+            account_name = #{accountName},
+            notes = #{notes}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM holdings
+        WHERE id = #{id}
+    </delete>
+
+</mapper>
