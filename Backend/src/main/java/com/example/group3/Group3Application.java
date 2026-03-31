@@ -6,7 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @MapperScan({
 		"com.example.group3.Asset.Mapper",
-		"com.example.group3.Holding.Mapper"
+		"com.example.group3.Holding.Mapper",
+		"com.example.group3.transaction.repository",
+		"com.example.group3.market.repository"
 })
 @SpringBootApplication
 public class Group3Application {
