@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.group3.Asset.Mapper.AssetMapper">
+
+    <resultMap id="AssetResultMap" type="com.example.group3.Asset.Entity.Asset">
+        <id property="id" column="id"/>
+        <result property="symbol" column="symbol"/>
+        <result property="name" column="name"/>
+        <result property="assetType" column="asset_type"/>
+        <result property="market" column="market"/>
+        <result property="currency" column="currency"/>
+        <result property="sector" column="sector"/>
+        <result property="exchange" column="exchange"/>
+        <result property="isActive" column="is_active"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="AssetResultMap">
+        SELECT id, symbol, name, asset_type, market, currency, sector, exchange, is_active
+        FROM assets
+        ORDER BY id ASC
+    </select>
+
+    <select id="findById" parameterType="long" resultMap="AssetResultMap">
+        SELECT id, symbol, name, asset_type, market, currency, sector, exchange, is_active
+        FROM assets
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert"
+            parameterType="com.example.group3.Asset.Entity.Asset"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO assets (
+            symbol,
+            name,
+            asset_type,
+            market,
+            currency,
+            sector,
+            exchange,
+            is_active
+        ) VALUES (
+                     #{symbol},
+                     #{name},
+                     #{assetType},
+                     #{market},
+                     #{currency},
+                     #{sector},
+                     #{exchange},
+                     #{isActive}
+                 )
+    </insert>
+
+    <update id="updateById"
+            parameterType="com.example.group3.Asset.Entity.Asset">
+        UPDATE assets
+        SET
+            symbol = #{symbol},
+            name = #{name},
+            asset_type = #{assetType},
+            market = #{market},
+            currency = #{currency},
+            sector = #{sector},
+            exchange = #{exchange},
+            is_active = #{isActive}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM assets
+        WHERE id = #{id}
+    </delete>
+
+</mapper>
