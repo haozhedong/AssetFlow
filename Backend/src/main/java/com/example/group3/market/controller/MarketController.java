@@ -16,37 +16,19 @@ public class MarketController {
 
     private final MarketService marketService;
 
-    /**
-     * 获取单个资产最新价格
-     */
+    // 获取最新价格
     @GetMapping("/latest/{assetId}")
-    public PriceResponseDTO getLatestPrice(
-            @PathVariable Long assetId,
-            @RequestParam String symbol) {
-        return marketService.getLatestPrice(assetId, symbol);
+    public PriceResponseDTO getLatestPrice(@PathVariable Long assetId) {
+        return marketService.getLatestPrice(assetId);
     }
 
-    /**
-     * 刷新单个资产价格
-     */
+    // 刷新价格
     @PostMapping("/refresh/{assetId}")
-    public PriceResponseDTO refreshPrice(
-            @PathVariable Long assetId,
-            @RequestParam String symbol) {
-        return marketService.refreshPrice(assetId, symbol);
+    public PriceResponseDTO refreshPrice(@PathVariable Long assetId) {
+        return marketService.refreshPrice(assetId);
     }
 
-    /**
-     * 刷新所有资产价格
-     */
-    @PostMapping("/refresh-all")
-    public void refreshAllPrices() {
-        marketService.refreshAllPrices();
-    }
-
-    /**
-     * 查询历史价格
-     */
+    // 查询历史价格
     @GetMapping("/history/{assetId}")
     public List<PriceSnapshot> getHistoryPrices(
             @PathVariable Long assetId,

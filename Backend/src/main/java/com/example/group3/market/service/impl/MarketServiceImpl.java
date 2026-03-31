@@ -11,6 +11,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -22,11 +23,11 @@ public class MarketServiceImpl implements MarketService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public PriceResponseDTO getLatestPrice(Long assetId, String symbol) {
-        // 1. 从Provider获取最新行情
-        PriceResponseDTO dto = marketDataProvider.getLatestPrice(assetId, symbol);
+    public PriceResponseDTO getLatestPrice(Long assetId) {
+        // 1. 获取行情
+        PriceResponseDTO dto = marketDataProvider.fetchPrice(assetId);
 
-        // 2. 转成数据库实体并保存快照
+        // 2. 存入数据库
         PriceSnapshot snapshot = new PriceSnapshot();
         BeanUtils.copyProperties(dto, snapshot);
         priceSnapshotMapper.insert(snapshot);
@@ -35,22 +36,17 @@ public class MarketServiceImpl implements MarketService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public PriceResponseDTO refreshPrice(Long assetId, String symbol) {
-        return getLatestPrice(assetId, symbol);
-    }
-
-    @Override
-    public void refreshAllPrices() {
-        marketDataProvider.refreshAllPrices();
+    public PriceResponseDTO refreshPrice(Long assetId) {
+        return getLatestPrice(assetId);
     }
 
     @Override
     public List<PriceSnapshot> getHistoryPrices(HistoryPriceQueryDTO queryDTO) {
-        return priceSnapshotMapper.selectHistory(
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        return priceSnapshotMapper.selectByAssetIdAndDateRange(
                 queryDTO.getAssetId(),
-                queryDTO.getStartTime(),
-                queryDTO.getEndTime()
+                queryDTO.getStartDate().format(formatter),
+                queryDTO.getEndDate().format(formatter)
         );
     }
 }

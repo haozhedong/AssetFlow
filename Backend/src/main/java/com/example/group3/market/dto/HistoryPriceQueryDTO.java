@@ -1,11 +1,13 @@
 package com.example.group3.market.dto;
 
 import lombok.Data;
-import java.time.LocalDateTime;
+
+import java.time.LocalDate;
+
 
 @Data
 public class HistoryPriceQueryDTO {
     private Long assetId;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    private LocalDate startDate;
+    private LocalDate endDate;
 }

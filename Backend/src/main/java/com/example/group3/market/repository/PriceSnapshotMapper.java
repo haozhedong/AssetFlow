@@ -9,11 +9,16 @@ import java.util.List;
 
 @Mapper
 public interface PriceSnapshotMapper {
+    // 插入价格快照
     int insert(PriceSnapshot snapshot);
 
-    List<PriceSnapshot> selectHistory(
-            @Param("assetId") Long assetId,
-            @Param("startTime") LocalDateTime startTime,
-            @Param("endTime") LocalDateTime endTime
+    // 根据资产ID + 日期范围查询历史价格
+    List<PriceSnapshot> selectByAssetIdAndDateRange(
+            Long assetId,
+            String startDate,
+            String endDate
     );
+
+    // 获取最新价格
+    PriceSnapshot selectLatestByAssetId(Long assetId);
 }
