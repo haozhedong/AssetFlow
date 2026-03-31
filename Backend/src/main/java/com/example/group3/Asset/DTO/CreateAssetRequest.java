@@ -1,6 +1,7 @@
 package com.example.group3.Asset.DTO;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public class CreateAssetRequest {
     @NotBlank(message = "symbol cannot be blank")
@@ -16,6 +17,8 @@ public class CreateAssetRequest {
     private String currency;
     private String sector;
     private String exchange;
+
+    @NotNull(message = "isactive cannot be blank")
     private Boolean isActive;
 
     public void CreateAssetRequest() {
