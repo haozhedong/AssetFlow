@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.group3.market.repository.PriceSnapshotMapper">
+
+    <insert id="insert" parameterType="com.example.group3.market.entity.PriceSnapshot"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO price_snapshots (
+            asset_id, symbol, price, change, change_percent,
+            high24h, low24h, volume24h, snapshot_time
+        )
+        VALUES (
+            #{assetId}, #{symbol}, #{price}, #{change}, #{changePercent},
+            #{high24h}, #{low24h}, #{volume24h}, #{snapshotTime}
+        )
+    </insert>
+
+    <select id="selectHistory" resultType="com.example.group3.market.entity.PriceSnapshot">
+        SELECT *
+        FROM price_snapshots
+        WHERE asset_id = #{assetId}
+          AND snapshot_time &gt;= #{startTime}
+          AND snapshot_time &lt;= #{endTime}
+        ORDER BY snapshot_time ASC
+    </select>
+
+</mapper>
+

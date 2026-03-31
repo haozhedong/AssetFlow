@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.group3.transaction.repository.TransactionMapper">
+
+    <select id="selectByAssetId" resultType="com.example.group3.transaction.entity.Transaction">
+        SELECT *
+        FROM transactions
+        WHERE asset_id = #{assetId}
+        ORDER BY transaction_date DESC
+    </select>
+
+    <select id="selectAll" resultType="com.example.group3.transaction.entity.Transaction">
+        SELECT *
+        FROM transactions
+        ORDER BY transaction_date DESC
+    </select>
+
+    <select id="selectById" parameterType="long" resultType="com.example.group3.transaction.entity.Transaction">
+        SELECT *
+        FROM transactions
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.group3.transaction.entity.Transaction"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO transactions (asset_id, transaction_type, quantity, price, fee, transaction_date, account_name, notes)
+        VALUES (#{assetId}, #{transactionType}, #{quantity}, #{price}, #{fee}, #{transactionDate}, #{accountName}, #{notes})
+    </insert>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM transactions
+        WHERE id = #{id}
+    </delete>
+
+</mapper>
+

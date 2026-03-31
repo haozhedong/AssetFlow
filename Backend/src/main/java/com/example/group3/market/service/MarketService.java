@@ -1,13 +1,12 @@
 package com.example.group3.market.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.group3.market.dto.HistoryPriceQueryDTO;
 import com.example.group3.market.dto.PriceResponseDTO;
 import com.example.group3.market.entity.PriceSnapshot;
 
 import java.util.List;
 
-public interface MarketService extends IService<PriceSnapshot> {
+public interface MarketService {
     // 获取最新价格并入库
     PriceResponseDTO getLatestPrice(Long assetId, String symbol);
     // 刷新单个资产价格

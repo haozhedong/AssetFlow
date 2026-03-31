@@ -1,6 +1,5 @@
 package com.example.group3.transaction.service.impl;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.example.group3.transaction.domain.TransactionDomain;
 import com.example.group3.transaction.dto.TransactionDTO;
 import com.example.group3.transaction.dto.TransactionVO;
@@ -29,7 +28,7 @@ public class TransactionServiceImpl implements TransactionService {
         if (assetId != null) {
             list = transactionMapper.selectByAssetId(assetId);
         } else {
-            list = transactionMapper.selectList(Wrappers.emptyWrapper());
+            list = transactionMapper.selectAll();
         }
 
         return list.stream().map(e -> {

@@ -1,13 +1,20 @@
 package com.example.group3.transaction.repository;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import com.example.group3.transaction.entity.Transaction;
 
 import java.util.List;
 
 @Mapper
-public interface TransactionMapper extends BaseMapper<Transaction> {
-    // 自定义查询可写这里
+public interface TransactionMapper {
     List<Transaction> selectByAssetId(Long assetId);
+
+    List<Transaction> selectAll();
+
+    Transaction selectById(@Param("id") Long id);
+
+    int insert(Transaction transaction);
+
+    int deleteById(@Param("id") Long id);
 }
