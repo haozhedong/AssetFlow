@@ -50,6 +50,24 @@
         WHERE id = #{id}
     </select>
 
+    <select id="findByAssetId" parameterType="long" resultMap="HoldingResultMap">
+        SELECT
+            id,
+            asset_id,
+            quantity,
+            average_cost,
+            cost_currency,
+            purchase_date,
+            account_name,
+            notes,
+            created_at,
+            updated_at
+        FROM holdings
+        WHERE asset_id = #{assetId}
+        ORDER BY id DESC
+            LIMIT 1
+    </select>
+
     <insert id="insert"
             parameterType="com.example.group3.Holding.Entity.Holding"
             useGeneratedKeys="true"

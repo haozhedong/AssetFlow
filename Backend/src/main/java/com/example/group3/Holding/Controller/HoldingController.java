@@ -1,6 +1,7 @@
 package com.example.group3.Holding.Controller;
 
 import com.example.group3.Holding.DTO.CreateHoldingRequest;
+import com.example.group3.Holding.DTO.HoldingDetailResponse;
 import com.example.group3.Holding.DTO.HoldingResponse;
 import com.example.group3.Holding.DTO.UpdateHoldingRequest;
 import com.example.group3.Holding.Service.HoldingService;
@@ -24,8 +25,8 @@ public class HoldingController {
     }
 
     @GetMapping("/{id}")
-    public HoldingResponse getHoldingById(@PathVariable Long id) {
-        return holdingService.getHoldingById(id);
+    public HoldingDetailResponse getDetailHoldingById(@PathVariable Long id) {
+        return holdingService.getDetailHoldingById(id);
     }
 
     @PostMapping

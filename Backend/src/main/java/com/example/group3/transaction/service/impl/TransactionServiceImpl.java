@@ -1,5 +1,6 @@
 package com.example.group3.transaction.service.impl;
 
+import com.example.group3.Holding.Service.HoldingService;
 import com.example.group3.transaction.domain.TransactionDomain;
 import com.example.group3.transaction.dto.TransactionDTO;
 import com.example.group3.transaction.dto.TransactionVO;
@@ -21,6 +22,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionMapper transactionMapper;
     private final TransactionDomain transactionDomain; // DDD 领域
+    private final HoldingService holdingService;
 
     @Override
     public List<TransactionVO> list(Long assetId) {
@@ -54,7 +56,13 @@ public class TransactionServiceImpl implements TransactionService {
         t.setTransactionType("buy");
 
         // TODO 调用接口，修改holding
-
+        holdingService.applyBuy(
+                dto.getAssetId(),
+                dto.getQuantity(),
+                dto.getPrice(),
+                dto.getFee(),
+                dto.getAccountName()
+        );
         // DDD 领域规则校验
         transactionDomain.validateBuy(t);
 
@@ -72,7 +80,13 @@ public class TransactionServiceImpl implements TransactionService {
         BeanUtils.copyProperties(dto, t);
         t.setTransactionType("sell");
         // TODO 调用接口，修改holding
-
+        holdingService.applySell(
+                dto.getAssetId(),
+                dto.getQuantity(),
+                dto.getPrice(),
+                dto.getFee(),
+                dto.getAccountName()
+        );
         // DDD 领域规则
         transactionDomain.validateSell(t);
 

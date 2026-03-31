@@ -12,6 +12,8 @@ public interface HoldingMapper {
 
     Holding findById(@Param("id") Long id);
 
+    Holding findByAssetId(@Param("assetId") Long assetId);
+
     int insert(Holding holding);
 
     int updateById(Holding holding);
