@@ -1,5 +1,6 @@
 package com.example.group3.dashboard.Controller;
 
+import com.example.group3.analytics.dto.DashboardFullResponse;
 import com.example.group3.analytics.dto.DashboardOverviewResponse;
 import com.example.group3.dashboard.Service.DashboardService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,4 +21,7 @@ public class DashboardController {
     public DashboardOverviewResponse getOverview() {
         return dashboardService.getOverview();
     }
+
+    @GetMapping("/full")
+    public DashboardFullResponse getFullDashboard() { return dashboardService.getFullDashboard(); }
 }

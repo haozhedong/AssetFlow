@@ -103,7 +103,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     private List<HoldingSnapshot> loadSnapshotsFromDb() {
         List<Holding> holdings = holdingMapper.findAll();
-        List<HoldingSnapshot> snapshots = new ArrayList<>();
+        List<HoldingSnapshot> snapshots = new ArrayList<>(); // 结果合集
 
         for (Holding holding : holdings) {
             Asset asset = assetMapper.findById(holding.getAssetId());
@@ -113,7 +113,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
             PriceSnapshot latestPriceSnapshot = priceSnapshotMapper.selectLatestByAssetId(holding.getAssetId());
 
-            HoldingSnapshot snapshot = new HoldingSnapshot();
+            HoldingSnapshot snapshot = new HoldingSnapshot(); // 每条snapshot
             snapshot.setHoldingId(holding.getId());
             snapshot.setAssetId(holding.getAssetId());
             snapshot.setSymbol(asset.getSymbol());
