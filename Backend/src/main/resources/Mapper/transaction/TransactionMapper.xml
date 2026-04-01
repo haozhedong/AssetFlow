@@ -25,8 +25,8 @@
 
     <insert id="insert" parameterType="com.example.group3.transaction.entity.Transaction"
             useGeneratedKeys="true" keyProperty="id" keyColumn="id">
-        INSERT INTO transactions (asset_id, transaction_type, quantity, price, fee, transaction_date, account_name, notes)
-        VALUES (#{assetId}, #{transactionType}, #{quantity}, #{price}, #{fee}, #{transactionDate}, #{accountName}, #{notes})
+        INSERT INTO transactions (asset_id, transaction_type, quantity, price, fee, account_name, notes)
+        VALUES (#{assetId}, #{transactionType}, #{quantity}, #{price}, #{fee}, #{accountName}, #{notes})
     </insert>
 
     <delete id="deleteById" parameterType="long">
