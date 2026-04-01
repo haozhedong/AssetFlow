@@ -373,8 +373,6 @@ public class HoldingServiceImpl implements HoldingService {
         }
 
         // 获取实时价格
-        assetMapper.insert(asset);
-
         PriceResponseDTO latestPriceResponse = marketDataProvider.fetchPrice(holding.getAssetId());
 
         if (latestPriceResponse != null) {
