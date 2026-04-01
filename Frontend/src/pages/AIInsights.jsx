@@ -1,65 +1,53 @@
+import AiPortfolioDoctor from "../components/AiPortfolioDoctor";
+
 export default function AIInsights() {
   return (
-    <div style={styles.page}>
-      <h1 style={styles.title}>AI Insights</h1>
+      <div style={styles.page}>
+        <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <h1 style={styles.title}>AI Insights</h1>
+          </div>
 
-      <div style={styles.cardLarge}>
-        📊 Suggestion: Reduce concentration in Tech sector
+          <div style={styles.contentBlock}>
+            <AiPortfolioDoctor />
+          </div>
+        </section>
       </div>
-
-      <div style={styles.cardLarge}>
-        💡 Opportunity: Increase ETF allocation for stability
-      </div>
-    </div>
   );
 }
 
-
 const styles = {
   page: {
+    minHeight: "100vh",
+    backgroundColor: "#050b14",
+    color: "#e5e7eb",
+    fontFamily:
+        "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    padding: "0",
+  },
+
+  section: {
+    padding: "24px",
+  },
+
+  sectionHeader: {
     display: "flex",
-    flexDirection: "column",
-    gap: "20px",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "24px",
+    flexWrap: "wrap",
   },
 
   title: {
-    color: "#e2e8f0",
-    fontSize: "26px",
     margin: 0,
+    fontSize: "32px",
+    fontWeight: 700,
+    color: "#f8fafc",
+    lineHeight: 1.1,
   },
 
-  cards: {
-    display: "flex",
-    gap: "16px",
-  },
-
-  card: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    padding: "16px",
-    borderRadius: "12px",
-    color: "#e2e8f0",
-    flex: 1,
-  },
-
-  cardLarge: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    padding: "20px",
-    borderRadius: "16px",
-    color: "#e2e8f0",
-  },
-
-  tableCard: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "16px",
-    padding: "20px",
-  },
-
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    color: "#e2e8f0",
+  contentBlock: {
+    paddingTop: "8px",
   },
 };
