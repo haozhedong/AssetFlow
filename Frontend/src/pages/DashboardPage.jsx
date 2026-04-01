@@ -8,6 +8,8 @@ import HoldingsTable from "../components/HoldingsTable";
 import slogan from "../assets/slogan.png";
 import WeatherWidget from "../components/WeatherWidget";
 import MarketTicker from "../components/MarketTicker";
+import AiPortfolioDoctor from "../components/AiPortfolioDoctor.jsx";
+
 
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
@@ -162,13 +164,8 @@ export default function DashboardPage() {
           </div>
 
           <div style={styles.columnPanelRight}>
-            <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Performance</h2>
-              <span style={styles.sectionMeta}>Portfolio trend over time</span>
-            </div>
-
             <div style={styles.contentBlock}>
-              <PerformanceChart data={dashboardData?.performance || []} />
+              <AiPortfolioDoctor />
             </div>
           </div>
         </section>
@@ -384,18 +381,18 @@ const styles = {
 
   twoColumnSection: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "1fr 1fr", // 改为 "1fr" 以全宽显示
     borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
   },
 
   columnPanelLeft: {
-    padding: "18px 24px 18px 0",
-    borderRight: "1px solid rgba(148, 163, 184, 0.18)",
+    padding: "18px 24px 18px 0", // 改为 "18px 0"
+    borderRight: "1px solid rgba(148, 163, 184, 0.18)", // 移除右边框
     minWidth: 0,
   },
 
   columnPanelRight: {
-    padding: "18px 0 18px 24px",
+    padding: "18px 0 18px 24px", // 改为 "18px 0"
     minWidth: 0,
   },
 
