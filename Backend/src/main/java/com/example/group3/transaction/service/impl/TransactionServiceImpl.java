@@ -1,5 +1,7 @@
 package com.example.group3.transaction.service.impl;
 
+import com.example.group3.Asset.Entity.Asset;
+import com.example.group3.Asset.Mapper.AssetMapper;
 import com.example.group3.Holding.Service.HoldingService;
 import com.example.group3.transaction.domain.TransactionDomain;
 import com.example.group3.transaction.dto.TransactionDTO;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TransactionServiceImpl implements TransactionService {
 
+    private final AssetMapper assetMapper;
     private final TransactionMapper transactionMapper;
     private final TransactionDomain transactionDomain; // DDD 领域
     private final HoldingService holdingService;
@@ -36,6 +39,11 @@ public class TransactionServiceImpl implements TransactionService {
         return list.stream().map(e -> {
             TransactionVO vo = new TransactionVO();
             BeanUtils.copyProperties(e, vo);
+            Asset asset = assetMapper.findById(e.getAssetId());
+            if (asset == null) {
+                throw new RuntimeException("资产不存在，id=" + e.getAssetId());
+            }
+            vo.setSymbol(asset.getSymbol());
             return vo;
         }).collect(Collectors.toList());
     }
@@ -45,6 +53,11 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction t = transactionMapper.selectById(id);
         TransactionVO vo = new TransactionVO();
         BeanUtils.copyProperties(t, vo);
+        Asset asset = assetMapper.findById(id);
+        if (asset == null) {
+            throw new RuntimeException("资产不存在，id=" + id);
+        }
+        t.setAssetId(asset.getId());
         return vo;
     }
 
@@ -52,12 +65,16 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public TransactionVO buy(TransactionDTO dto) {
         Transaction t = new Transaction();
+        Asset asset = assetMapper.findBySymbol(dto.getSymbol());
+        if (asset == null) {
+            throw new RuntimeException("资产不存在，symbol=" + dto.getSymbol());
+        }
         BeanUtils.copyProperties(dto, t);
         t.setTransactionType("buy");
+        t.setAssetId(asset.getId());
 
-        // TODO 调用接口，修改holding
         holdingService.applyBuy(
-                dto.getAssetId(),
+                asset.getId(),
                 dto.getQuantity(),
                 dto.getPrice(),
                 dto.getFee(),
@@ -70,6 +87,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         TransactionVO vo = new TransactionVO();
         BeanUtils.copyProperties(t, vo);
+        vo.setSymbol(dto.getSymbol());
         return vo;
     }
 
@@ -77,11 +95,16 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public TransactionVO sell(TransactionDTO dto) {
         Transaction t = new Transaction();
+        Asset asset = assetMapper.findBySymbol(dto.getSymbol());
+        if (asset == null) {
+            throw new RuntimeException("资产不存在，symbol=" + dto.getSymbol());
+        }
         BeanUtils.copyProperties(dto, t);
         t.setTransactionType("sell");
-        // TODO 调用接口，修改holding
+        t.setAssetId(asset.getId());
+
         holdingService.applySell(
-                dto.getAssetId(),
+                asset.getId(),
                 dto.getQuantity(),
                 dto.getPrice(),
                 dto.getFee(),
@@ -94,6 +117,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         TransactionVO vo = new TransactionVO();
         BeanUtils.copyProperties(t, vo);
+        vo.setSymbol(dto.getSymbol());
         return vo;
     }
 

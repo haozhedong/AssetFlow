@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class TransactionVO {
     private Long id;
-    private Long assetId;
+    private String symbol ;
     private String transactionType;
     private BigDecimal quantity;
     private BigDecimal price;
