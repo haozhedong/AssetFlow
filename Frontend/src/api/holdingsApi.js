@@ -1,7 +1,25 @@
 const BASE_URL = "http://localhost:8080";
 
 export async function getAllHoldings() {
-  const response = await fetch(`${BASE_URL}/api/holdings`);
+  const response = await fetch(`${BASE_URL}/api/holdings/list`);
+  if (!response.ok) throw new Error("Failed to fetch holdings");
+  return response.json();
+}
+
+export async function getHoldingsWithPage(params = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.keyword) searchParams.append("keyword", params.keyword);
+  if (params.assetType) searchParams.append("assetType", params.assetType);
+  if (params.market) searchParams.append("market", params.market);
+  if (params.accountName) searchParams.append("accountName", params.accountName);
+  searchParams.append("page", params.page || 1);
+  searchParams.append("pageSize", params.pageSize || 10);
+  searchParams.append("sortBy", params.sortBy || "id");
+  searchParams.append("sortDir", params.sortDir || "asc");
+
+  const response = await fetch(
+    `${BASE_URL}/api/holdings?${searchParams.toString()}`
+  );
   if (!response.ok) throw new Error("Failed to fetch holdings");
   return response.json();
 }
@@ -91,4 +109,27 @@ export function exportHoldingsToCsv(holdings) {
   document.body.removeChild(link);
 
   window.URL.revokeObjectURL(url);
+}
+
+export async function getAllAssets() {
+  const response = await fetch(`${BASE_URL}/api/assets`);
+  if (!response.ok) throw new Error("Failed to fetch assets");
+  return response.json();
+}
+
+export async function createAsset(payload) {
+  const response = await fetch(`${BASE_URL}/api/assets`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Failed to create asset");
+  }
+
+  return response.json();
 }
