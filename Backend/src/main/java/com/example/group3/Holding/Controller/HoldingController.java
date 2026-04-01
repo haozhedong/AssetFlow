@@ -16,7 +16,6 @@ public class HoldingController {
     public HoldingController(HoldingService holdingService) {
         this.holdingService = holdingService;
     }
-
     //获取全部持仓列表
     @GetMapping("/list")
     public List<HoldingDetailResponse> getAllHoldings() {
