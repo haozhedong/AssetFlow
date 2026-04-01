@@ -7,8 +7,11 @@ import com.example.group3.Holding.Entity.Holding;
 import com.example.group3.Holding.Mapper.HoldingMapper;
 import com.example.group3.Holding.Service.HoldingService;
 import com.example.group3.common.Response.PageResponse;
+import com.example.group3.market.dto.PriceResponseDTO;
 import com.example.group3.market.entity.PriceSnapshot;
+import com.example.group3.market.provider.FinnhubMarketDataProvider;
 import com.example.group3.market.repository.PriceSnapshotMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,16 +24,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @Service
+@RequiredArgsConstructor
 public class HoldingServiceImpl implements HoldingService {
     private final HoldingMapper holdingMapper;
     private final AssetMapper assetMapper;
-    private final PriceSnapshotMapper priceSnapshotMapper;
-
-    public HoldingServiceImpl(HoldingMapper holdingMapper, AssetMapper assetMapper,PriceSnapshotMapper priceSnapshotMapper) {
-        this.holdingMapper = holdingMapper;
-        this.assetMapper = assetMapper;
-        this.priceSnapshotMapper = priceSnapshotMapper;
-    }
+    private final FinnhubMarketDataProvider marketDataProvider;
 
     @Override
     public List<HoldingDetailResponse> getAllHoldings() {
@@ -374,11 +372,15 @@ public class HoldingServiceImpl implements HoldingService {
             response.setMarket(asset.getMarket());
         }
 
-        PriceSnapshot latestSnapshot = priceSnapshotMapper.selectLatestByAssetId(holding.getAssetId());
-        if (latestSnapshot != null) {
-            BigDecimal latestPrice = latestSnapshot.getPrice();
+        // 获取实时价格
+        assetMapper.insert(asset);
+
+        PriceResponseDTO latestPriceResponse = marketDataProvider.fetchPrice(holding.getAssetId());
+
+        if (latestPriceResponse != null) {
+            BigDecimal latestPrice = latestPriceResponse.getPrice();
             response.setLatestPrice(latestPrice);
-            response.setPriceSnapshotTime(latestSnapshot.getFetchedAt());
+            response.setPriceSnapshotTime(latestPriceResponse.getFetchedAt());
 
             BigDecimal marketValue = holding.getQuantity().multiply(latestPrice);
             response.setMarketValue(marketValue);
