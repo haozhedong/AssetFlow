@@ -23,6 +23,52 @@ public class HoldingDetailResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private BigDecimal latestPrice;
+    private BigDecimal marketValue;
+    private BigDecimal unrealizedPnl;
+    private BigDecimal pnlPercent;
+    private LocalDateTime priceSnapshotTime;
+
+    public BigDecimal getLatestPrice() {
+        return latestPrice;
+    }
+
+    public void setLatestPrice(BigDecimal latestPrice) {
+        this.latestPrice = latestPrice;
+    }
+
+    public BigDecimal getMarketValue() {
+        return marketValue;
+    }
+
+    public void setMarketValue(BigDecimal marketValue) {
+        this.marketValue = marketValue;
+    }
+
+    public BigDecimal getUnrealizedPnl() {
+        return unrealizedPnl;
+    }
+
+    public void setUnrealizedPnl(BigDecimal unrealizedPnl) {
+        this.unrealizedPnl = unrealizedPnl;
+    }
+
+    public BigDecimal getPnlPercent() {
+        return pnlPercent;
+    }
+
+    public void setPnlPercent(BigDecimal pnlPercent) {
+        this.pnlPercent = pnlPercent;
+    }
+
+    public LocalDateTime getPriceSnapshotTime() {
+        return priceSnapshotTime;
+    }
+
+    public void setPriceSnapshotTime(LocalDateTime priceSnapshotTime) {
+        this.priceSnapshotTime = priceSnapshotTime;
+    }
+
     public HoldingDetailResponse() {
     }
 
