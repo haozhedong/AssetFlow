@@ -3,6 +3,8 @@ package com.example.group3.transaction.service.impl;
 import com.example.group3.Asset.Entity.Asset;
 import com.example.group3.Asset.Mapper.AssetMapper;
 import com.example.group3.Holding.Service.HoldingService;
+import com.example.group3.market.dto.PriceResponseDTO;
+import com.example.group3.market.provider.FinnhubMarketDataProvider;
 import com.example.group3.transaction.domain.TransactionDomain;
 import com.example.group3.transaction.dto.TransactionDTO;
 import com.example.group3.transaction.dto.TransactionVO;
@@ -15,6 +17,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +29,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionMapper transactionMapper;
     private final TransactionDomain transactionDomain; // DDD 领域
     private final HoldingService holdingService;
+    private final FinnhubMarketDataProvider marketDataProvider;
 
     @Override
     public List<TransactionVO> list(Long assetId) {
@@ -73,10 +77,15 @@ public class TransactionServiceImpl implements TransactionService {
         t.setTransactionType("buy");
         t.setAssetId(asset.getId());
 
+        // 添加实时价格
+        PriceResponseDTO priceResponseDTO = marketDataProvider.fetchPrice(asset.getId());
+        t.setPrice(priceResponseDTO.getPrice());
+        t.setTransactionDate(LocalDateTime.now());
+
         holdingService.applyBuy(
                 asset.getId(),
                 dto.getQuantity(),
-                dto.getPrice(),
+                priceResponseDTO.getPrice(),
                 dto.getFee(),
                 dto.getAccountName()
         );
@@ -103,10 +112,15 @@ public class TransactionServiceImpl implements TransactionService {
         t.setTransactionType("sell");
         t.setAssetId(asset.getId());
 
+        // 添加实时价格
+        PriceResponseDTO priceResponseDTO = marketDataProvider.fetchPrice(asset.getId());
+        t.setPrice(priceResponseDTO.getPrice());
+        t.setTransactionDate(LocalDateTime.now());
+
         holdingService.applySell(
                 asset.getId(),
                 dto.getQuantity(),
-                dto.getPrice(),
+                priceResponseDTO.getPrice(),
                 dto.getFee(),
                 dto.getAccountName()
         );
