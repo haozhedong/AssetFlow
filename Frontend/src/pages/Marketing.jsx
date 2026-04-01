@@ -1,7 +1,7 @@
-export default function Analytics() {
+export default function Marketing() {
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>Analytics</h1>
+      <h1 style={styles.title}>Marketing</h1>
 
       <div style={styles.cards}>
         <div style={styles.card}>Risk Score: Medium</div>

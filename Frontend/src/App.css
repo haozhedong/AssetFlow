@@ -182,3 +182,21 @@
     border-right-color: var(--border);
   }
 }
+
+@keyframes market-ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.market-ticker-marquee {
+  animation: market-ticker-scroll 120s linear infinite;
+  will-change: transform;
+}
+
+.market-ticker-track:hover .market-ticker-marquee {
+  animation-play-state: paused;
+}

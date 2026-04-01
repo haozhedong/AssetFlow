@@ -43,79 +43,94 @@ function getWeatherLabel(code) {
   return map[code] || "Unknown";
 }
 
-function getWeatherIcon(code) {
-  if (code === 0) return <Sun size={28} color="#facc15" strokeWidth={2.2} />;
-
-  if ([1, 2].includes(code)) {
-    return <Cloud size={28} color="#cbd5e1" strokeWidth={2.2} />;
-  }
-
-  if (code === 3) {
-    return <Cloud size={28} color="#94a3b8" strokeWidth={2.2} />;
-  }
-
-  if ([45, 48].includes(code)) {
-    return <CloudFog size={28} color="#94a3b8" strokeWidth={2.2} />;
-  }
-
-  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) {
-    return <CloudRain size={28} color="#38bdf8" strokeWidth={2.2} />;
-  }
-
-  if ([71, 73, 75, 77, 85, 86].includes(code)) {
-    return <CloudSnow size={28} color="#e0f2fe" strokeWidth={2.2} />;
-  }
-
-  if ([95, 96, 99].includes(code)) {
-    return <CloudLightning size={28} color="#facc15" strokeWidth={2.2} />;
-  }
-
-  return <Cloud size={28} color="#cbd5e1" strokeWidth={2.2} />;
-}
-
 function getTemperatureColor(temp) {
-  if (temp >= 32) return "#f97316";
-  if (temp >= 26) return "#22c55e";
-  if (temp >= 18) return "#38bdf8";
-  return "#60a5fa";
+  if (temp >= 32) return "#ea580c";
+  if (temp >= 26) return "#16a34a";
+  if (temp >= 18) return "#0284c7";
+  return "#2563eb";
 }
 
-function formatLocationLabel(lat, lon) {
-  return `${Number(lat).toFixed(2)}, ${Number(lon).toFixed(2)}`;
+function getWeatherIcon(code) {
+  const commonProps = { size: 20, strokeWidth: 2.2 };
+
+  if (code === 0) return <Sun {...commonProps} color="#eab308" />;
+  if ([1, 2].includes(code)) return <Cloud {...commonProps} color="#64748b" />;
+  if (code === 3) return <Cloud {...commonProps} color="#475569" />;
+  if ([45, 48].includes(code)) return <CloudFog {...commonProps} color="#64748b" />;
+  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) {
+    return <CloudRain {...commonProps} color="#0284c7" />;
+  }
+  if ([71, 73, 75, 77, 85, 86].includes(code)) {
+    return <CloudSnow {...commonProps} color="#60a5fa" />;
+  }
+  if ([95, 96, 99].includes(code)) {
+    return <CloudLightning {...commonProps} color="#eab308" />;
+  }
+
+  return <Cloud {...commonProps} color="#64748b" />;
+}
+
+function getBestCityName(geoData, fallback = "Local") {
+  if (!geoData) return fallback;
+
+  return (
+    geoData.city ||
+    geoData.locality ||
+    geoData.principalSubdivision ||
+    geoData.localityInfo?.administrative?.[0]?.name ||
+    fallback
+  );
 }
 
 export default function WeatherWidget() {
   const [weather, setWeather] = useState(null);
-  const [locationLabel, setLocationLabel] = useState("Detecting location...");
+  const [city, setCity] = useState("Locating...");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchWeather(lat, lon, label) {
+    async function fetchWeatherAndCity(lat, lon, fallbackCity = "Local") {
       try {
-        const url =
+        const weatherUrl =
           `https://api.open-meteo.com/v1/forecast` +
           `?latitude=${lat}` +
           `&longitude=${lon}` +
           `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m` +
           `&timezone=auto`;
 
-        const response = await fetch(url);
+        const cityUrl =
+          `https://api-bdc.net/data/reverse-geocode-client` +
+          `?latitude=${lat}` +
+          `&longitude=${lon}` +
+          `&localityLanguage=en`;
 
-        if (!response.ok) {
+        const [weatherRes, cityRes] = await Promise.all([
+          fetch(weatherUrl),
+          fetch(cityUrl),
+        ]);
+
+        if (!weatherRes.ok) {
           throw new Error("Weather request failed");
         }
 
-        const data = await response.json();
+        const weatherData = await weatherRes.json();
+
+        let cityName = fallbackCity;
+
+        if (cityRes.ok) {
+          const cityData = await cityRes.json();
+          cityName = getBestCityName(cityData, fallbackCity);
+        }
 
         if (!cancelled) {
-          setWeather(data.current);
-          setLocationLabel(label || formatLocationLabel(lat, lon));
+          setWeather(weatherData.current);
+          setCity(cityName);
           setLoading(false);
         }
       } catch (err) {
+        console.error(err);
         if (!cancelled) {
           setError("Unable to load weather");
           setLoading(false);
@@ -124,7 +139,7 @@ export default function WeatherWidget() {
     }
 
     if (!navigator.geolocation) {
-      fetchWeather(1.3521, 103.8198, "Singapore");
+      fetchWeatherAndCity(1.3521, 103.8198, "Singapore");
       return;
     }
 
@@ -132,10 +147,10 @@ export default function WeatherWidget() {
       (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
-        fetchWeather(lat, lon, formatLocationLabel(lat, lon));
+        fetchWeatherAndCity(lat, lon, "Local");
       },
       () => {
-        fetchWeather(1.3521, 103.8198, "Singapore");
+        fetchWeatherAndCity(1.3521, 103.8198, "Singapore");
       },
       {
         enableHighAccuracy: true,
@@ -152,12 +167,32 @@ export default function WeatherWidget() {
   if (loading) {
     return (
       <section style={styles.section}>
-        <div style={styles.headerRow}>
-          <h3 style={styles.title}>Current Weather</h3>
-          <span style={styles.meta}>Live conditions</span>
-        </div>
+        <div style={styles.grid}>
+          <div style={styles.item}>
+            <div style={styles.label}>Condition</div>
+            <div style={styles.valuePrimary}>Loading weather...</div>
+          </div>
 
-        <div style={styles.loadingRow}>Loading weather...</div>
+          <div style={styles.item}>
+            <div style={styles.label}>Temperature</div>
+            <div style={styles.valueNeutral}>--</div>
+          </div>
+
+          <div style={styles.item}>
+            <div style={styles.label}>Feels Like</div>
+            <div style={styles.valueNeutral}>--</div>
+          </div>
+
+          <div style={styles.item}>
+            <div style={styles.label}>Humidity</div>
+            <div style={styles.valueNeutral}>--</div>
+          </div>
+
+          <div style={styles.itemNoBorder}>
+            <div style={styles.label}>Wind</div>
+            <div style={styles.valueNeutral}>--</div>
+          </div>
+        </div>
       </section>
     );
   }
@@ -165,30 +200,48 @@ export default function WeatherWidget() {
   if (error || !weather) {
     return (
       <section style={styles.section}>
-        <div style={styles.headerRow}>
-          <h3 style={styles.title}>Current Weather</h3>
-          <span style={styles.meta}>Live conditions</span>
-        </div>
+        <div style={styles.grid}>
+          <div style={styles.item}>
+            <div style={styles.label}>Condition</div>
+            <div style={styles.valuePrimary}>{error || "Weather unavailable"}</div>
+          </div>
 
-        <div style={styles.loadingRow}>{error || "Weather unavailable"}</div>
+          <div style={styles.item}>
+            <div style={styles.label}>Temperature</div>
+            <div style={styles.valueNeutral}>--</div>
+          </div>
+
+          <div style={styles.item}>
+            <div style={styles.label}>Feels Like</div>
+            <div style={styles.valueNeutral}>--</div>
+          </div>
+
+          <div style={styles.item}>
+            <div style={styles.label}>Humidity</div>
+            <div style={styles.valueNeutral}>--</div>
+          </div>
+
+          <div style={styles.itemNoBorder}>
+            <div style={styles.label}>Wind</div>
+            <div style={styles.valueNeutral}>--</div>
+          </div>
+        </div>
       </section>
     );
   }
 
   const tempColor = getTemperatureColor(Number(weather.temperature_2m ?? 0));
-  const feelsLikeColor = getTemperatureColor(Number(weather.apparent_temperature ?? 0));
+  const feelsLikeColor = getTemperatureColor(
+    Number(weather.apparent_temperature ?? 0)
+  );
 
   return (
     <section style={styles.section}>
-      <div style={styles.headerRow}>
-        <h3 style={styles.title}>Current Weather</h3>
-        <span style={styles.meta}>{locationLabel}</span>
-      </div>
-
       <div style={styles.grid}>
         <div style={styles.item}>
           <div style={styles.label}>Condition</div>
           <div style={styles.conditionRow}>
+            <span style={styles.city}>{city}</span>
             <div style={styles.iconWrap}>{getWeatherIcon(weather.weather_code)}</div>
             <div style={styles.valuePrimary}>
               {getWeatherLabel(weather.weather_code)}
@@ -230,103 +283,81 @@ export default function WeatherWidget() {
 
 const styles = {
   section: {
-    padding: "18px 0",
-    borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
-  },
-
-  headerRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "12px",
-    marginBottom: "12px",
-    flexWrap: "wrap",
-  },
-
-  title: {
-    margin: 0,
-    fontSize: "22px",
-    fontWeight: 700,
-    color: "#f8fafc",
-    lineHeight: 1.1,
-  },
-
-  meta: {
-    fontSize: "13px",
-    color: "#94a3b8",
-    whiteSpace: "nowrap",
-  },
-
-  loadingRow: {
-    padding: "14px 0",
-    borderTop: "1px solid rgba(148, 163, 184, 0.18)",
-    borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
-    color: "#94a3b8",
-    fontSize: "14px",
+    padding: "6px 0",
+    background: "#1e293b",
   },
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1fr",
-    borderTop: "1px solid rgba(148, 163, 184, 0.18)",
-    borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
+    gridTemplateColumns: "1.9fr 1fr 1fr 1fr 1fr",
+    background: "#1e293b ",
   },
 
   item: {
-    padding: "16px 18px",
-    borderRight: "1px solid rgba(148, 163, 184, 0.18)",
+    padding: "10px 14px",
+    borderRight: "1px solid #e2e8f0",
     minWidth: 0,
     background: "transparent",
   },
 
   itemNoBorder: {
-    padding: "16px 18px",
+    padding: "10px 14px",
     minWidth: 0,
     background: "transparent",
   },
 
   label: {
-    fontSize: "12px",
-    color: "#94a3b8",
-    marginBottom: "8px",
+    fontSize: "10px",
+    color: "#64748b",
+    marginBottom: "4px",
     textTransform: "uppercase",
-    letterSpacing: "0.06em",
+    letterSpacing: "0.08em",
+    fontWeight: 600,
   },
 
   conditionRow: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "8px",
     minWidth: 0,
+    flexWrap: "wrap",
+  },
+
+  city: {
+    fontSize: "12px",
+    fontWeight: 600,
+    color: "#64748b",
+    marginRight: "4px",
+    letterSpacing: "0.01em",
   },
 
   iconWrap: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "34px",
-    height: "34px",
+    width: "24px",
+    height: "24px",
     flexShrink: 0,
   },
 
   valuePrimary: {
-    fontSize: "20px",
-    fontWeight: 700,
-    color: "#e5e7eb",
+    fontSize: "16px",
+    fontWeight: 600,
+    color: "#ffffff",
     lineHeight: 1.2,
     wordBreak: "break-word",
   },
 
   value: {
-    fontSize: "24px",
-    fontWeight: 700,
+    fontSize: "18px",
+    fontWeight: 600,
     lineHeight: 1.1,
   },
 
   valueNeutral: {
-    fontSize: "24px",
-    fontWeight: 700,
-    color: "#e5e7eb",
+    fontSize: "18px",
+    fontWeight: 600,
+    color: "#ffffff",
     lineHeight: 1.1,
   },
 };

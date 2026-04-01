@@ -1,17 +1,14 @@
 export default function HoldingsTable({ data = [] }) {
   if (!data.length) {
     return (
-      <section style={styles.card}>
-        <h2 style={styles.title}>Top Holdings</h2>
+      <section style={styles.wrapper}>
         <div style={styles.empty}>No holdings data</div>
       </section>
     );
   }
 
   return (
-    <section style={styles.card}>
-      <h2 style={styles.title}>Top Holdings</h2>
-
+    <section style={styles.wrapper}>
       <div style={styles.tableWrapper}>
         <table style={styles.table}>
           <thead>
@@ -32,17 +29,17 @@ export default function HoldingsTable({ data = [] }) {
               const isPositive = Number(row.unrealizedPnl) >= 0;
 
               return (
-                <tr key={row.holdingId ?? row.symbol} className="table-row">
+                <tr key={row.holdingId ?? row.symbol} style={styles.row}>
                   <td style={styles.tdSymbol}>{row.symbol}</td>
                   <td style={styles.td}>{row.assetName}</td>
                   <td style={styles.td}>
-                    {Number(row.quantity ?? 0).toFixed(4)}
+                    {Math.round(Number(row.quantity ?? 0)).toLocaleString()}
                   </td>
                   <td style={styles.td}>
-                    ${Number(row.averageCost ?? 0).toFixed(4)}
+                    ${Number(row.averageCost ?? 0).toFixed(2)}
                   </td>
                   <td style={styles.td}>
-                    ${Number(row.latestPrice ?? 0).toFixed(4)}
+                    ${Number(row.latestPrice ?? 0).toFixed(2)}
                   </td>
                   <td style={styles.td}>
                     ${Number(row.marketValue ?? 0).toLocaleString()}
@@ -70,23 +67,11 @@ export default function HoldingsTable({ data = [] }) {
 }
 
 const styles = {
-  card: {
+  wrapper: {
     background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "24px",
-  },
-
-  title: {
-    marginTop: 0,
-    marginBottom: "16px",
-    color: "#e2e8f0",
-    fontSize: "20px",
-  },
-
-  empty: {
-    color: "#94a3b8",
-    fontSize: "14px",
+    borderTop: "1px solid #334155",
+    borderBottom: "1px solid #334155",
+    padding: "0", // ✅ 关键：去掉 padding
   },
 
   tableWrapper: {
@@ -100,24 +85,35 @@ const styles = {
 
   th: {
     textAlign: "left",
-    padding: "14px",
-    fontSize: "13px",
-    color: "#94a3b8",
+    padding: "10px 16px",
+    fontSize: "11px",
+    color: "#64748b",
     borderBottom: "1px solid #334155",
     fontWeight: 500,
+    letterSpacing: "0.08em",
   },
 
   td: {
-    padding: "14px",
-    borderBottom: "1px solid #1e293b",
+    padding: "10px 16px",
+    borderBottom: "1px solid #273449",
     color: "#e2e8f0",
-    fontSize: "14px",
+    fontSize: "13px",
   },
 
   tdSymbol: {
-    padding: "14px",
-    borderBottom: "1px solid #1e293b",
+    padding: "10px 16px",
+    borderBottom: "1px solid #273449",
     color: "#3b82f6",
     fontWeight: 700,
+  },
+
+  row: {
+    transition: "background 0.15s ease",
+  },
+
+  empty: {
+    color: "#94a3b8",
+    fontSize: "14px",
+    padding: "12px 16px",
   },
 };

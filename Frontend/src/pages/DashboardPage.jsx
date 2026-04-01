@@ -7,6 +7,7 @@ import PerformanceChart from "../components/PerformanceChart";
 import HoldingsTable from "../components/HoldingsTable";
 import slogan from "../assets/slogan.png";
 import WeatherWidget from "../components/WeatherWidget";
+import MarketTicker from "../components/MarketTicker";
 
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
@@ -98,23 +99,6 @@ export default function DashboardPage() {
             <span style={styles.topBarLabel}>Portfolio Terminal</span>
           </div>
 
-          <div style={styles.marketTicker}>
-            <span style={styles.tickerItem}>
-              S&amp;P 500 <span style={styles.positive}>+2.91%</span>
-            </span>
-            <span style={styles.tickerDivider}>|</span>
-            <span style={styles.tickerItem}>
-              Nasdaq <span style={styles.positive}>+3.83%</span>
-            </span>
-            <span style={styles.tickerDivider}>|</span>
-            <span style={styles.tickerItem}>
-              BTC <span style={styles.positive}>+2.96%</span>
-            </span>
-            <span style={styles.tickerDivider}>|</span>
-            <span style={styles.tickerItem}>
-              US 10Y <span style={styles.neutral}>0.00%</span>
-            </span>
-          </div>
         </section>
 
         <section style={styles.heroSection}>
@@ -158,6 +142,8 @@ export default function DashboardPage() {
             <KpiCards data={dashboardData} />
           </div>
         </section>
+
+        <MarketTicker />
 
 
 
