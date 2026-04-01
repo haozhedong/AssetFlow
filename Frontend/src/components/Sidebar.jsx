@@ -2,7 +2,6 @@ import { Link, useLocation } from "react-router-dom";
 
 const items = [
   { name: "Dashboard", path: "/" },
-  { name: "Assets", path: "/assets" },
   { name: "Holdings", path: "/holdings" },
   { name: "Transactions", path: "/transactions" },
   { name: "Analytics", path: "/analytics" },

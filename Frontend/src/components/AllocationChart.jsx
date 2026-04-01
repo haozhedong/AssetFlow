@@ -37,10 +37,10 @@ export default function AllocationChart({ data = [] }) {
       <text
         x={x}
         y={y}
-        fill="#e2e8f0"
+        fill="#cbd5e1"
         textAnchor="middle"
         dominantBaseline="central"
-        style={{ fontSize: 12, fontWeight: 600 }}
+        style={{ fontSize: 11, fontWeight: 600 }}
       >
         {(percent * 100).toFixed(0)}%
       </text>
@@ -49,80 +49,111 @@ export default function AllocationChart({ data = [] }) {
 
   if (!chartData.length) {
     return (
-      <section style={styles.card}>
+      <section style={styles.wrapper}>
         <h2 style={styles.title}>Asset Allocation</h2>
-        <div style={{ color: "#94a3b8" }}>No allocation data</div>
+        <div style={styles.empty}>No allocation data</div>
       </section>
     );
   }
 
   return (
-    <section className="chart-card" style={styles.card}>
+    <section style={styles.wrapper}>
       <h2 style={styles.title}>Asset Allocation</h2>
 
-      <div style={{ width: "100%", height: 300 }}>
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={60}
-              outerRadius={110}
-              paddingAngle={2}
-              label={renderLabel} 
-              onMouseLeave={onPieLeave}
-            >
-              {chartData.map((entry, index) => (
-                <Cell
-                  key={entry.name}
-                  fill={COLORS[index % COLORS.length]}
-                  style={{
-                    transform:
-                      index === activeIndex ? "scale(1.08)" : "scale(1)",
-                    transformOrigin: "center",
-                    transition: "all 0.2s ease",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={() => onPieEnter(entry, index)}
-                />
-              ))}
-            </Pie>
+      <div style={styles.chartArea}>
+        <div style={styles.chartBox}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={58}
+                outerRadius={108}
+                paddingAngle={1}
+                label={renderLabel}
+                onMouseLeave={onPieLeave}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell
+                    key={entry.name}
+                    fill={COLORS[index % COLORS.length]}
+                    style={{
+                      transform: index === activeIndex ? "scale(1.04)" : "scale(1)",
+                      transformOrigin: "center",
+                      transition: "transform 0.18s ease",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={() => onPieEnter(entry, index)}
+                  />
+                ))}
+              </Pie>
 
-            <Tooltip
-              formatter={(value) => `$${Number(value).toLocaleString()}`}
-              contentStyle={{
-                backgroundColor: "#0f172a",
-                border: "1px solid #334155",
-                borderRadius: "12px",
-                color: "#e2e8f0",
-              }}
-            />
+              <Tooltip
+                formatter={(value) => `$${Number(value).toLocaleString()}`}
+                contentStyle={{
+                  backgroundColor: "#08111f",
+                  border: "1px solid rgba(148, 163, 184, 0.22)",
+                  borderRadius: "0px",
+                  color: "#e2e8f0",
+                  fontSize: "12px",
+                }}
+                itemStyle={{
+                  color: "#e2e8f0",
+                }}
+                labelStyle={{
+                  color: "#94a3b8",
+                }}
+              />
 
-            <Legend
-              wrapperStyle={{
-                color: "#94a3b8",
-                fontSize: "12px",
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+              <Legend
+                wrapperStyle={{
+                  color: "#94a3b8",
+                  fontSize: "12px",
+                  paddingTop: "10px",
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </section>
   );
 }
 
 const styles = {
-  card: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "24px",
+  wrapper: {
+    background: "transparent",
+    border: "none",
+    borderRadius: "0",
+    padding: "0",
   },
+
   title: {
-    marginTop: 0,
-    marginBottom: "16px",
-    color: "#e2e8f0",
-    fontSize: "20px",
+    margin: "0 0 12px 0",
+    color: "#e5e7eb",
+    fontSize: "16px",
+    fontWeight: 700,
+    letterSpacing: "0.02em",
+  },
+
+  chartArea: {
+    paddingTop: "4px",
+  },
+
+  chartBox: {
+    width: "100%",
+    height: "320px",
+    borderTop: "1px solid rgba(148, 163, 184, 0.18)",
+    borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
+    padding: "16px 0 8px",
+    background: "transparent",
+  },
+
+  empty: {
+    color: "#94a3b8",
+    padding: "12px 0",
+    borderTop: "1px solid rgba(148, 163, 184, 0.18)",
+    borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
   },
 };

@@ -19,39 +19,45 @@ const fallbackData = [
 ];
 
 export default function PerformanceChart({ data }) {
-  // 如果后端还没接 → 用假数据
   const chartData = data && data.length ? data : fallbackData;
 
   return (
-    <section className="chart-card" style={styles.card}>
+    <section style={styles.wrapper}>
       <h2 style={styles.title}>Portfolio Performance</h2>
 
-      <div style={{ width: "100%", height: 300 }}>
+      <div style={styles.chartBox}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
-            <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+          <LineChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+            <CartesianGrid
+              stroke="rgba(148, 163, 184, 0.18)"
+              strokeDasharray="3 3"
+              vertical={true}
+              horizontal={true}
+            />
 
             <XAxis
               dataKey="date"
               tick={{ fill: "#94a3b8", fontSize: 12 }}
-              axisLine={{ stroke: "#334155" }}
-              tickLine={{ stroke: "#334155" }}
+              axisLine={{ stroke: "rgba(148, 163, 184, 0.18)" }}
+              tickLine={{ stroke: "rgba(148, 163, 184, 0.18)" }}
             />
 
             <YAxis
               tick={{ fill: "#94a3b8", fontSize: 12 }}
-              axisLine={{ stroke: "#334155" }}
-              tickLine={{ stroke: "#334155" }}
+              axisLine={{ stroke: "rgba(148, 163, 184, 0.18)" }}
+              tickLine={{ stroke: "rgba(148, 163, 184, 0.18)" }}
             />
 
             <Tooltip
               contentStyle={{
-                backgroundColor: "#0f172a",
-                border: "1px solid #334155",
-                borderRadius: "12px",
+                backgroundColor: "#08111f",
+                border: "1px solid rgba(148, 163, 184, 0.22)",
+                borderRadius: "0px",
                 color: "#e2e8f0",
+                fontSize: "12px",
               }}
               labelStyle={{ color: "#e2e8f0" }}
+              itemStyle={{ color: "#e2e8f0" }}
             />
 
             <Line
@@ -70,16 +76,27 @@ export default function PerformanceChart({ data }) {
 }
 
 const styles = {
-  card: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "24px",
+  wrapper: {
+    background: "transparent",
+    border: "none",
+    borderRadius: "0",
+    padding: "0",
   },
+
   title: {
-    marginTop: 0,
-    marginBottom: "16px",
-    color: "#e2e8f0",
-    fontSize: "20px",
+    margin: "0 0 12px 0",
+    color: "#e5e7eb",
+    fontSize: "16px",
+    fontWeight: 700,
+    letterSpacing: "0.02em",
+  },
+
+  chartBox: {
+    width: "100%",
+    height: "320px",
+    borderTop: "1px solid rgba(148, 163, 184, 0.18)",
+    borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
+    padding: "16px 0 8px",
+    background: "transparent",
   },
 };

@@ -1,6 +1,6 @@
 export default function KpiCards({ data }) {
   if (!data || !data.summary) {
-    return <div style={{ color: "#fff" }}>Loading...</div>;
+    return <div style={{ color: "#94a3b8", padding: "12px 0" }}>Loading...</div>;
   }
 
   const summary = data.summary;
@@ -33,8 +33,17 @@ export default function KpiCards({ data }) {
       <h2 style={styles.heading}>Summary</h2>
 
       <div style={styles.grid}>
-        {kpis.map((item) => (
-          <div key={item.label} className="kpi-card" style={styles.card}>
+        {kpis.map((item, index) => (
+          <div
+            key={item.label}
+            style={{
+              ...styles.item,
+              borderRight:
+                index === kpis.length - 1
+                  ? "none"
+                  : "1px solid rgba(148, 163, 184, 0.18)",
+            }}
+          >
             <div style={styles.label}>{item.label}</div>
             <div style={{ ...styles.value, color: item.color }}>
               {item.value}
@@ -48,36 +57,45 @@ export default function KpiCards({ data }) {
 
 const styles = {
   wrapper: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "20px 24px",
+    padding: "0",
+    background: "transparent",
+    border: "none",
+    borderRadius: "0",
   },
+
   heading: {
-    marginTop: 0,
-    marginBottom: "18px",
-    color: "#e2e8f0",
-    fontSize: "20px",
+    margin: "0 0 12px 0",
+    color: "#e5e7eb",
+    fontSize: "16px",
+    fontWeight: 700,
+    letterSpacing: "0.02em",
   },
+
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "16px",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    borderTop: "1px solid rgba(148, 163, 184, 0.18)",
+    borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
   },
-  card: {
-    border: "1px solid #334155",
-    borderRadius: "14px",
-    padding: "16px",
-    background: "#0f172a",
-    transition: "all 0.2s ease",
+
+  item: {
+    padding: "16px 18px",
+    background: "transparent",
+    borderRadius: "0",
+    minWidth: 0,
   },
+
   label: {
-    fontSize: "13px",
+    fontSize: "12px",
     color: "#94a3b8",
-    marginBottom: "6px",
+    marginBottom: "8px",
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
   },
+
   value: {
-    fontSize: "26px",
+    fontSize: "24px",
     fontWeight: 700,
+    lineHeight: 1.1,
   },
 };
