@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader } from "lucide-react";
 import { getAiPortfolioSummary } from "../api/dashboardApi";
 
-
 const DIAGNOSTIC_MESSAGES = [
-    "🔍 分析您的投资组合结构...",
-    "📊 计算风险评分...",
-    "🎯 评估资产配置...",
-    "⚠️ 识别潜在风险...",
-    "💡 生成个性化建议...",
-    "✨ 准备最终报告...",
+    "Analyzing your portfolio structure...",
+    "Calculating risk metrics...",
+    "Evaluating asset allocation...",
+    "Identifying potential risks...",
+    "Generating personalized recommendations...",
+    "Preparing final report...",
 ];
 
 export default function AiPortfolioDoctor() {
@@ -19,18 +18,18 @@ export default function AiPortfolioDoctor() {
     const [messageIndex, setMessageIndex] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
 
-    // 消息轮换
+    // Message rotation
     useEffect(() => {
         if (!loading) return;
 
         const messageInterval = setInterval(() => {
             setMessageIndex((prev) => (prev + 1) % DIAGNOSTIC_MESSAGES.length);
-        }, 15000);
+        }, 3000);
 
         return () => clearInterval(messageInterval);
     }, [loading]);
 
-    // 计时器
+    // Timer
     useEffect(() => {
         if (!loading) return;
 
@@ -41,24 +40,21 @@ export default function AiPortfolioDoctor() {
         return () => clearInterval(timerInterval);
     }, [loading]);
 
-    // 获取数据
+    // Fetch data
     useEffect(() => {
         let isMounted = true;
 
         async function fetchAiSummary() {
             try {
-                console.log("开始加载 AI 诊断...");
                 const data = await getAiPortfolioSummary();
 
                 if (isMounted) {
-                    console.log("AI 诊断加载成功");
                     setAiSummary(data.text);
                     setError("");
                     setLoading(false);
                 }
             } catch (err) {
                 if (isMounted) {
-                    console.error("AI 诊断加载失败:", err);
                     setError(err.message || "Failed to load AI diagnosis");
                     setLoading(false);
                 }
@@ -78,43 +74,43 @@ export default function AiPortfolioDoctor() {
         return `${minutes}:${secs.toString().padStart(2, "0")}`;
     };
 
-    // 加载中
+    // Loading state
     if (loading) {
         return (
             <section style={styles.wrapper}>
                 <div style={styles.header}>
-                    <h2 style={styles.title}>AI Portfolio Doctor</h2>
-                    <span style={styles.badge}>AI Analysis</span>
+                    <h2 style={styles.title}>Portfolio Doctor</h2>
+                    <span style={styles.badge}>AI ANALYSIS</span>
                 </div>
 
                 <div style={styles.loadingBox}>
                     <div style={styles.spinner}></div>
                     <p style={styles.diagnosticMessage}>{DIAGNOSTIC_MESSAGES[messageIndex]}</p>
-                    <p style={styles.timerInfo}>已用时间: {formatTime(elapsedTime)}</p>
-                    <p style={styles.estimatedTime}>诊断通常需要 1-3 分钟，请耐心等待...</p>
+                    <p style={styles.timerInfo}>Elapsed: {formatTime(elapsedTime)}</p>
+                    <p style={styles.estimatedTime}>Analysis typically takes 1-3 minutes</p>
                 </div>
             </section>
         );
     }
 
-    // 错误
+    // Error state
     if (error) {
         return (
             <section style={styles.wrapper}>
                 <div style={styles.header}>
-                    <h2 style={styles.title}>AI Portfolio Doctor</h2>
-                    <span style={styles.badge}>AI Analysis</span>
+                    <h2 style={styles.title}>Portfolio Doctor</h2>
+                    <span style={styles.badge}>AI ANALYSIS</span>
                 </div>
 
                 <div style={styles.errorBox}>
-                    <AlertCircle size={24} style={{ color: "#fca5a5", marginRight: "12px", flexShrink: 0 }} />
+                    <AlertCircle size={20} style={styles.errorIcon} />
                     <div style={styles.errorContent}>
                         <p style={styles.errorMessage}>{error}</p>
                         <button
                             onClick={() => window.location.reload()}
                             style={styles.retryButton}
                         >
-                            🔄 重新加载页面
+                            Retry
                         </button>
                     </div>
                 </div>
@@ -122,76 +118,111 @@ export default function AiPortfolioDoctor() {
         );
     }
 
-    // 成功 - 简单显示文本
+    // Success state - Formatted content display
     return (
         <section style={styles.wrapper}>
             <div style={styles.header}>
-                <h2 style={styles.title}>AI Portfolio Doctor</h2>
-                <span style={styles.badge}>AI Analysis</span>
+                <h2 style={styles.title}>Portfolio Doctor</h2>
+                <span style={styles.badge}>AI ANALYSIS</span>
             </div>
 
             <div style={styles.contentBox}>
                 <div style={styles.markdownContent}>
-                    {aiSummary && aiSummary.split("\n").map((line, idx) => {
-                        // 简单的 markdown 处理
-                        if (line.startsWith("###")) {
-                            return <h3 key={idx} style={styles.h3}>{line.replace(/^#+\s/, "")}</h3>;
-                        }
-                        if (line.startsWith("**")) {
-                            return <p key={idx} style={styles.p}><strong style={styles.strong}>{line.replace(/\*\*/g, "")}</strong></p>;
-                        }
-                        if (line.startsWith("*")) {
-                            return <li key={idx} style={styles.li}>{line.replace(/^\*\s/, "")}</li>;
-                        }
-                        if (line.trim() === "") {
-                            return <div key={idx} style={{ height: "8px" }} />;
-                        }
-                        return <p key={idx} style={styles.p}>{line}</p>;
-                    })}
+                    {aiSummary && renderFormattedContent(aiSummary)}
                 </div>
             </div>
 
             <div style={styles.footer}>
-                <span style={styles.footerText}>Powered by AI Analysis</span>
+                <CheckCircle size={16} style={styles.successIcon} />
+                <span style={styles.footerText}>Analysis completed</span>
             </div>
         </section>
     );
+}
+
+// Helper function to render formatted content
+function renderFormattedContent(content) {
+    return content.split("\n").map((line, idx) => {
+        const trimmed = line.trim();
+
+        // Empty lines
+        if (trimmed === "") {
+            return <div key={idx} style={{ height: "8px" }} />;
+        }
+
+        // Headings
+        if (trimmed.startsWith("### ")) {
+            return (
+                <h3 key={idx} style={styles.h3}>
+                    {trimmed.replace(/^### /, "")}
+                </h3>
+            );
+        }
+
+        // Bold text
+        if (trimmed.startsWith("**") && trimmed.endsWith("**")) {
+            return (
+                <p key={idx} style={styles.p}>
+                    <strong style={styles.strong}>
+                        {trimmed.replace(/\*\*/g, "")}
+                    </strong>
+                </p>
+            );
+        }
+
+        // List items
+        if (trimmed.startsWith("- ")) {
+            return (
+                <li key={idx} style={styles.li}>
+                    {trimmed.replace(/^- /, "")}
+                </li>
+            );
+        }
+
+        // Regular paragraphs
+        return (
+            <p key={idx} style={styles.p}>
+                {trimmed}
+            </p>
+        );
+    });
 }
 
 const styles = {
     wrapper: {
         background: "transparent",
         padding: "0",
+        borderRadius: "8px",
     },
 
     header: {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "12px",
+        marginBottom: "16px",
         gap: "12px",
         flexWrap: "wrap",
     },
 
     title: {
         margin: 0,
-        color: "#e5e7eb",
-        fontSize: "16px",
+        color: "#f0f4f8",
+        fontSize: "18px",
         fontWeight: 700,
         letterSpacing: "0.02em",
     },
 
     badge: {
         display: "inline-block",
-        padding: "4px 10px",
-        backgroundColor: "rgba(59, 130, 246, 0.15)",
+        padding: "6px 12px",
+        backgroundColor: "rgba(59, 130, 246, 0.12)",
         color: "#60a5fa",
-        fontSize: "11px",
+        fontSize: "10px",
         fontWeight: 700,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
         borderRadius: "4px",
-        border: "1px solid rgba(59, 130, 246, 0.3)",
+        border: "1px solid rgba(59, 130, 246, 0.25)",
     },
 
     loadingBox: {
@@ -199,41 +230,42 @@ const styles = {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "60px 24px",
+        padding: "48px 24px",
         gap: "16px",
-        minHeight: "320px",
-        borderTop: "1px solid rgba(148, 163, 184, 0.18)",
-        borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
-        background: "linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%)",
+        minHeight: "280px",
+        borderRadius: "8px",
+        borderTop: "1px solid rgba(148, 163, 184, 0.15)",
+        borderBottom: "1px solid rgba(148, 163, 184, 0.15)",
+        background: "linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(99, 102, 241, 0.04) 100%)",
     },
 
     spinner: {
-        width: "50px",
-        height: "50px",
-        border: "3px solid rgba(59, 130, 246, 0.2)",
-        borderTop: "3px solid #3b82f6",
+        width: "48px",
+        height: "48px",
+        border: "2px solid rgba(59, 130, 246, 0.15)",
+        borderTop: "2px solid #3b82f6",
         borderRadius: "50%",
-        animation: "spin 1s linear infinite",
+        animation: "spin 0.8s linear infinite",
     },
 
     diagnosticMessage: {
         margin: "0",
-        fontSize: "16px",
+        fontSize: "15px",
         fontWeight: 600,
         color: "#60a5fa",
         textAlign: "center",
     },
 
     timerInfo: {
-        margin: "8px 0 0 0",
-        fontSize: "14px",
+        margin: "4px 0 0 0",
+        fontSize: "13px",
         color: "#94a3b8",
         textAlign: "center",
     },
 
     estimatedTime: {
-        margin: "8px 0 0 0",
-        fontSize: "13px",
+        margin: "4px 0 0 0",
+        fontSize: "12px",
         color: "#64748b",
         textAlign: "center",
         fontStyle: "italic",
@@ -242,11 +274,18 @@ const styles = {
     errorBox: {
         display: "flex",
         alignItems: "flex-start",
-        padding: "24px",
+        padding: "20px",
         gap: "12px",
-        borderTop: "1px solid rgba(239, 68, 68, 0.35)",
-        borderBottom: "1px solid rgba(239, 68, 68, 0.35)",
-        background: "rgba(239, 68, 68, 0.08)",
+        borderRadius: "8px",
+        borderTop: "1px solid rgba(239, 68, 68, 0.3)",
+        borderBottom: "1px solid rgba(239, 68, 68, 0.3)",
+        background: "rgba(239, 68, 68, 0.06)",
+    },
+
+    errorIcon: {
+        color: "#f87171",
+        flexShrink: 0,
+        marginTop: "2px",
     },
 
     errorContent: {
@@ -263,78 +302,100 @@ const styles = {
     },
 
     retryButton: {
-        marginTop: "8px",
+        marginTop: "4px",
         padding: "8px 16px",
         backgroundColor: "#ef4444",
         color: "#fff",
         border: "none",
         borderRadius: "4px",
-        fontSize: "14px",
+        fontSize: "13px",
         fontWeight: 600,
         cursor: "pointer",
         width: "fit-content",
+        transition: "all 0.2s ease",
     },
 
     contentBox: {
         width: "100%",
-        borderTop: "1px solid rgba(148, 163, 184, 0.18)",
-        borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
-        padding: "16px 0",
+        borderRadius: "8px",
+        borderTop: "1px solid rgba(148, 163, 184, 0.15)",
+        borderBottom: "1px solid rgba(148, 163, 184, 0.15)",
+        padding: "20px 0",
         background: "transparent",
     },
 
     markdownContent: {
         overflowY: "auto",
         maxHeight: "600px",
+        paddingRight: "8px",
     },
 
     h3: {
-        margin: "16px 0 12px 0",
-        fontSize: "16px",
+        margin: "18px 0 12px 0",
+        fontSize: "15px",
         fontWeight: 700,
-        color: "#f8fafc",
+        color: "#f0f4f8",
         lineHeight: 1.4,
+        textTransform: "capitalize",
     },
 
     p: {
-        margin: "8px 0",
+        margin: "10px 0",
         fontSize: "14px",
-        color: "#94a3b8",
-        lineHeight: 1.6,
+        color: "#cbd5e1",
+        lineHeight: 1.7,
     },
 
     strong: {
-        color: "#f8fafc",
+        color: "#f0f4f8",
         fontWeight: 700,
     },
 
     li: {
-        margin: "6px 0",
-        marginLeft: "20px",
+        margin: "8px 0",
+        marginLeft: "24px",
         fontSize: "14px",
-        color: "#94a3b8",
-        lineHeight: 1.6,
+        color: "#cbd5e1",
+        lineHeight: 1.7,
+        listStyleType: "disc",
     },
 
     footer: {
         marginTop: "12px",
-        textAlign: "right",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        justifyContent: "flex-end",
+    },
+
+    successIcon: {
+        color: "#22c55e",
     },
 
     footerText: {
         fontSize: "12px",
         color: "#64748b",
-        fontStyle: "italic",
     },
 };
 
-// 添加 CSS 动画
+// Add CSS animations
 if (typeof document !== "undefined") {
     const style = document.createElement("style");
     style.textContent = `
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  `;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    `;
     document.head.appendChild(style);
 }
