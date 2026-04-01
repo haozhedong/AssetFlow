@@ -2,18 +2,21 @@ package com.example.group3.Holding.Service.impl;
 
 import com.example.group3.Asset.Entity.Asset;
 import com.example.group3.Asset.Mapper.AssetMapper;
-import com.example.group3.Holding.DTO.CreateHoldingRequest;
-import com.example.group3.Holding.DTO.HoldingResponse;
-import com.example.group3.Holding.DTO.UpdateHoldingRequest;
+import com.example.group3.Holding.DTO.*;
 import com.example.group3.Holding.Entity.Holding;
 import com.example.group3.Holding.Mapper.HoldingMapper;
 import com.example.group3.Holding.Service.HoldingService;
+import com.example.group3.common.Response.PageResponse;
+import com.example.group3.market.entity.PriceSnapshot;
+import com.example.group3.market.repository.PriceSnapshotMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
-import com.example.group3.Holding.DTO.HoldingDetailResponse;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -21,18 +24,95 @@ import java.math.RoundingMode;
 public class HoldingServiceImpl implements HoldingService {
     private final HoldingMapper holdingMapper;
     private final AssetMapper assetMapper;
+    private final PriceSnapshotMapper priceSnapshotMapper;
 
-    public HoldingServiceImpl(HoldingMapper holdingMapper, AssetMapper assetMapper) {
+    public HoldingServiceImpl(HoldingMapper holdingMapper, AssetMapper assetMapper,PriceSnapshotMapper priceSnapshotMapper) {
         this.holdingMapper = holdingMapper;
         this.assetMapper = assetMapper;
+        this.priceSnapshotMapper = priceSnapshotMapper;
     }
 
     @Override
-    public List<HoldingResponse> getAllHoldings() {
+    public List<HoldingDetailResponse> getAllHoldings() {
         return holdingMapper.findAll()
                 .stream()
-                .map(this::toResponse)
+                .map(this::toDetailResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public PageResponse<HoldingDetailResponse> getSelectAllHoldings(HoldingQueryRequest request) {
+        List<HoldingDetailResponse> allRecords = holdingMapper.findAll()
+                .stream()
+                .map(this::toDetailResponse)
+                .collect(Collectors.toList());
+
+        List<HoldingDetailResponse> filtered = allRecords.stream()
+                .filter(item -> matchKeyword(item, request.getKeyword()))
+                .filter(item -> matchAssetType(item, request.getAssetType()))
+                .filter(item -> matchMarket(item, request.getMarket()))
+                .filter(item -> matchAccountName(item, request.getAccountName()))
+                .collect(Collectors.toList());
+
+        sortHoldings(filtered, request.getSortBy(), request.getSortDir());
+
+        int page = request.getPage() == null || request.getPage() < 1 ? 1 : request.getPage();
+        int pageSize = request.getPageSize() == null || request.getPageSize() < 1 ? 10 : request.getPageSize();
+
+        int fromIndex = (page - 1) * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, filtered.size());
+
+        List<HoldingDetailResponse> pageRecords = new ArrayList<>();
+        if (fromIndex < filtered.size()) {
+            pageRecords = filtered.subList(fromIndex, toIndex);
+        }
+
+        PageResponse<HoldingDetailResponse> response = new PageResponse<>();
+        response.setRecords(pageRecords);
+        response.setTotal((long) filtered.size());
+        response.setPage(page);
+        response.setPageSize(pageSize);
+
+        return response;
+    }
+
+    //关键词搜索 -- AssetSymbol / AssetName
+    private boolean matchKeyword(HoldingDetailResponse item, String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return true;
+        }
+        String lowerKeyword = keyword.toLowerCase(Locale.ROOT);
+
+        return containsIgnoreCase(item.getAssetSymbol(), lowerKeyword)
+                || containsIgnoreCase(item.getAssetName(), lowerKeyword);
+    }
+
+    //AssetType匹配
+    private boolean matchAssetType(HoldingDetailResponse item, String assetType) {
+        if (assetType == null || assetType.isBlank()) {
+            return true;
+        }
+        return assetType.equalsIgnoreCase(item.getAssetType());
+    }
+
+    //Market类型匹配
+    private boolean matchMarket(HoldingDetailResponse item, String market) {
+        if (market == null || market.isBlank()) {
+            return true;
+        }
+        return market.equalsIgnoreCase(item.getMarket());
+    }
+
+    //账户名匹配
+    private boolean matchAccountName(HoldingDetailResponse item, String accountName) {
+        if (accountName == null || accountName.isBlank()) {
+            return true;
+        }
+        return containsIgnoreCase(item.getAccountName(), accountName.toLowerCase(Locale.ROOT));
+    }
+
+    private boolean containsIgnoreCase(String source, String lowerKeyword) {
+        return source != null && source.toLowerCase(Locale.ROOT).contains(lowerKeyword);
     }
 
     @Override
@@ -208,6 +288,56 @@ public class HoldingServiceImpl implements HoldingService {
         }
     }
 
+    //Holding列表根据ID/assetSymbol/quantity/averageCost/latestPrice/marketValue/unrealizedPnl排序
+    private void sortHoldings(List<HoldingDetailResponse> list, String sortBy, String sortDir) {
+        Comparator<HoldingDetailResponse> comparator;
+
+        switch (sortBy == null ? "id" : sortBy) {
+            case "assetSymbol":
+                comparator = Comparator.comparing(
+                        item -> item.getAssetSymbol() == null ? "" : item.getAssetSymbol(),
+                        String.CASE_INSENSITIVE_ORDER
+                );
+                break;
+            case "quantity":
+                comparator = Comparator.comparing(
+                        item -> item.getQuantity() == null ? BigDecimal.ZERO : item.getQuantity()
+                );
+                break;
+            case "averageCost":
+                comparator = Comparator.comparing(
+                        item -> item.getAverageCost() == null ? BigDecimal.ZERO : item.getAverageCost()
+                );
+                break;
+            case "latestPrice":
+                comparator = Comparator.comparing(
+                        item -> item.getLatestPrice() == null ? BigDecimal.ZERO : item.getLatestPrice()
+                );
+                break;
+            case "marketValue":
+                comparator = Comparator.comparing(
+                        item -> item.getMarketValue() == null ? BigDecimal.ZERO : item.getMarketValue()
+                );
+                break;
+            case "unrealizedPnl":
+                comparator = Comparator.comparing(
+                        item -> item.getUnrealizedPnl() == null ? BigDecimal.ZERO : item.getUnrealizedPnl()
+                );
+                break;
+            default:
+                comparator = Comparator.comparing(
+                        item -> item.getId() == null ? 0L : item.getId()
+                );
+                break;
+        }
+
+        if ("desc".equalsIgnoreCase(sortDir)) {
+            comparator = comparator.reversed();
+        }
+
+        list.sort(comparator);
+    }
+
     private HoldingResponse toResponse(Holding holding) {
         HoldingResponse response = new HoldingResponse();
         response.setId(holding.getId());
@@ -242,6 +372,27 @@ public class HoldingServiceImpl implements HoldingService {
             response.setAssetName(asset.getName());
             response.setAssetType(asset.getAssetType());
             response.setMarket(asset.getMarket());
+        }
+
+        PriceSnapshot latestSnapshot = priceSnapshotMapper.selectLatestByAssetId(holding.getAssetId());
+        if (latestSnapshot != null) {
+            BigDecimal latestPrice = latestSnapshot.getPrice();
+            response.setLatestPrice(latestPrice);
+            response.setPriceSnapshotTime(latestSnapshot.getFetchedAt());
+
+            BigDecimal marketValue = holding.getQuantity().multiply(latestPrice);
+            response.setMarketValue(marketValue);
+
+            BigDecimal costBasis = holding.getQuantity().multiply(holding.getAverageCost());
+            BigDecimal unrealizedPnl = marketValue.subtract(costBasis);
+            response.setUnrealizedPnl(unrealizedPnl);
+
+            if (costBasis.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal pnlPercent = unrealizedPnl
+                        .divide(costBasis, 2, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal("100"));
+                response.setPnlPercent(pnlPercent);
+            }
         }
 
         return response;
