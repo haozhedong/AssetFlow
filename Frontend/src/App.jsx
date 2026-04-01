@@ -4,7 +4,7 @@ import MainLayout from "./layout/MainLayout";
 import DashboardPage from "./pages/DashboardPage";
 import Holdings from "./pages/Holdings";
 import Transactions from "./pages/Transactions";
-import Analytics from "./pages/Analytics";
+import Marketing from "./pages/Marketing";
 import AIInsights from "./pages/AIInsights";
 
 function App() {
@@ -15,7 +15,7 @@ function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/holdings" element={<Holdings />} />
           <Route path="/transactions" element={<Transactions />} />
-          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/marketing" element={<Marketing />} />
           <Route path="/ai" element={<AIInsights />} />
         </Route>
       </Routes>
