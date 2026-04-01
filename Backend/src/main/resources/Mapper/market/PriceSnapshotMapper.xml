@@ -22,7 +22,7 @@
         FROM price_snapshots
         WHERE asset_id = #{assetId}
         ORDER BY fetched_at DESC
-            LIMIT 1
+        LIMIT 1
     </select>
 
 </mapper>
