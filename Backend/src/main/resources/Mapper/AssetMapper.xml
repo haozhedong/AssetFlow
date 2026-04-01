@@ -29,6 +29,12 @@
         WHERE id = #{id}
     </select>
 
+    <select id="findBySymbol" parameterType="long" resultMap="AssetResultMap">
+        SELECT id, symbol, name, asset_type, market, currency, sector, exchange, is_active
+        FROM assets
+        WHERE symbol = #{symbol}
+    </select>
+
     <insert id="insert"
             parameterType="com.example.group3.Asset.Entity.Asset"
             useGeneratedKeys="true"

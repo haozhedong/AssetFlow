@@ -12,6 +12,8 @@ public interface AssetMapper {
 
     Asset findById(@Param("id") Long id);
 
+    Asset findBySymbol(@Param("symbol") String symbol);
+
     int insert(Asset asset);
 
     int updateById(Asset asset);
