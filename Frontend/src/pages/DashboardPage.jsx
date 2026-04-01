@@ -8,8 +8,6 @@ import HoldingsTable from "../components/HoldingsTable";
 import slogan from "../assets/slogan.png";
 import WeatherWidget from "../components/WeatherWidget";
 import MarketTicker from "../components/MarketTicker";
-import AiPortfolioDoctor from "../components/AiPortfolioDoctor.jsx";
-
 
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
@@ -35,21 +33,21 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div style={styles.page}>
-        <div style={styles.main}>
-          <div style={styles.statusBox}>Loading dashboard...</div>
+        <div style={styles.page}>
+          <div style={styles.main}>
+            <div style={styles.statusBox}>Loading dashboard...</div>
+          </div>
         </div>
-      </div>
     );
   }
 
   if (error) {
     return (
-      <div style={styles.page}>
-        <div style={styles.main}>
-          <div style={{ ...styles.statusBox, ...styles.errorBox }}>{error}</div>
+        <div style={styles.page}>
+          <div style={styles.main}>
+            <div style={{ ...styles.statusBox, ...styles.errorBox }}>{error}</div>
+          </div>
         </div>
-      </div>
     );
   }
 
@@ -64,7 +62,7 @@ export default function DashboardPage() {
       time: "5 min ago",
       title: "US equities extend gains as investors rotate into large-cap tech",
       summary:
-        "Mega-cap stocks led the session higher while Treasury yields stayed relatively stable.",
+          "Mega-cap stocks led the session higher while Treasury yields stayed relatively stable.",
     },
     {
       id: 2,
@@ -72,7 +70,7 @@ export default function DashboardPage() {
       time: "18 min ago",
       title: "Fed officials signal patience as inflation data remains mixed",
       summary:
-        "Markets are reassessing the rate path after policymakers reiterated a data-dependent stance.",
+          "Markets are reassessing the rate path after policymakers reiterated a data-dependent stance.",
     },
     {
       id: 3,
@@ -80,7 +78,7 @@ export default function DashboardPage() {
       time: "34 min ago",
       title: "Oil edges higher on renewed supply concerns in the Middle East",
       summary:
-        "Crude prices moved up amid supply uncertainty, with energy names outperforming in early trade.",
+          "Crude prices moved up amid supply uncertainty, with energy names outperforming in early trade.",
     },
     {
       id: 4,
@@ -88,136 +86,136 @@ export default function DashboardPage() {
       time: "52 min ago",
       title: "Semiconductor shares rally as AI infrastructure demand remains strong",
       summary:
-        "Chipmakers and cloud names outperformed after fresh optimism around enterprise AI spending.",
+          "Chipmakers and cloud names outperformed after fresh optimism around enterprise AI spending.",
     },
   ];
 
   return (
-    <div style={styles.page}>
-      <div style={styles.main}>
-        <section style={styles.topBar}>
-          <div style={styles.topBarLeft}>
-            <span style={styles.liveDot}></span>
-            <span style={styles.topBarLabel}>Portfolio Terminal</span>
-          </div>
+      <div style={styles.page}>
+        <div style={styles.main}>
+          <section style={styles.topBar}>
+            <div style={styles.topBarLeft}>
+              <span style={styles.liveDot}></span>
+              <span style={styles.topBarLabel}>Portfolio Terminal</span>
+            </div>
+          </section>
 
-        </section>
-
-        <section style={styles.heroSection}>
-          <div style={styles.heroLeft}>
-            <p style={styles.overline}>PORTFOLIO DASHBOARD</p>
-            <h1 style={styles.heroTitle}>Welcome back, {userName}</h1>
-            <p style={styles.heroSubtitle}>
-              Track your holdings, allocation, performance, and market context in one place.
-            </p>
-          </div>
-
-          <div style={styles.heroRight}>
-            <div style={styles.inlineMetric}>
-              <span style={styles.inlineMetricLabel}>Portfolio Value</span>
-              <span style={styles.inlineMetricValue}>{portfolioValue}</span>
+          <section style={styles.heroSection}>
+            <div style={styles.heroLeft}>
+              <p style={styles.overline}>PORTFOLIO DASHBOARD</p>
+              <h1 style={styles.heroTitle}>Welcome back, {userName}</h1>
+              <p style={styles.heroSubtitle}>
+                Track your holdings, allocation, performance, and market context in one place.
+              </p>
             </div>
 
-            <div style={styles.inlineMetric}>
-              <span style={styles.inlineMetricLabel}>Today</span>
-              <span
-                style={{
-                  ...styles.inlineMetricValue,
-                  color: String(dailyPnl).includes("-") ? "#ef4444" : "#22c55e",
-                }}
-              >
+            <div style={styles.heroRight}>
+              <div style={styles.inlineMetric}>
+                <span style={styles.inlineMetricLabel}>Portfolio Value</span>
+                <span style={styles.inlineMetricValue}>{portfolioValue}</span>
+              </div>
+
+              <div style={styles.inlineMetric}>
+                <span style={styles.inlineMetricLabel}>Today</span>
+                <span
+                    style={{
+                      ...styles.inlineMetricValue,
+                      color: String(dailyPnl).includes("-") ? "#ef4444" : "#22c55e",
+                    }}
+                >
                 {dailyPnl}
               </span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <WeatherWidget />
+          <WeatherWidget />
 
-        <section style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Key Metrics</h2>
-            <span style={styles.sectionMeta}>Live Overview</span>
-          </div>
-
-          <div style={styles.contentBlock}>
-            <KpiCards data={dashboardData} />
-          </div>
-        </section>
-
-        <MarketTicker />
-
-
-
-
-
-        <section style={styles.twoColumnSection}>
-          <div style={styles.columnPanelLeft}>
+          <section style={styles.section}>
             <div style={styles.sectionHeader}>
-              <h2 style={styles.sectionTitle}>Asset Allocation</h2>
-              <span style={styles.sectionMeta}>Diversification breakdown</span>
+              <h2 style={styles.sectionTitle}>Key Metrics</h2>
+              <span style={styles.sectionMeta}>Live Overview</span>
             </div>
 
             <div style={styles.contentBlock}>
-              <AllocationChart data={dashboardData?.allocation || []} />
+              <KpiCards data={dashboardData} />
             </div>
-          </div>
+          </section>
 
-          <div style={styles.columnPanelRight}>
+          <MarketTicker />
+
+          <section style={styles.twoColumnSection}>
+            <div style={styles.columnPanelLeft}>
+              <div style={styles.sectionHeader}>
+                <h2 style={styles.sectionTitle}>Asset Allocation</h2>
+                <span style={styles.sectionMeta}>Diversification breakdown</span>
+              </div>
+
+              <div style={styles.contentBlock}>
+                <AllocationChart data={dashboardData?.allocation || []} />
+              </div>
+            </div>
+
+            <div style={styles.columnPanelRight}>
+              <div style={styles.sectionHeader}>
+                <h2 style={styles.sectionTitle}>Performance</h2>
+                <span style={styles.sectionMeta}>Portfolio trend over time</span>
+              </div>
+
+              <div style={styles.contentBlock}>
+                <PerformanceChart data={dashboardData?.performance || []} />
+              </div>
+            </div>
+          </section>
+
+          <section style={styles.section}>
+            <div style={styles.sectionHeader}>
+              <h2 style={styles.sectionTitle}>Top Holdings</h2>
+              <span style={styles.sectionMeta}>Largest positions in your portfolio</span>
+            </div>
+
             <div style={styles.contentBlock}>
-              <AiPortfolioDoctor />
+              <HoldingsTable data={dashboardData?.topHoldings || []} />
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Top Holdings</h2>
-            <span style={styles.sectionMeta}>Largest positions in your portfolio</span>
-          </div>
+          <section style={styles.section}>
+            <div style={styles.sectionHeader}>
+              <h2 style={styles.sectionTitle}>Market News</h2>
+              <span style={styles.sectionMeta}>Latest developments affecting markets</span>
+            </div>
 
-          <div style={styles.contentBlock}>
-            <HoldingsTable data={dashboardData?.topHoldings || []} />
-          </div>
-        </section>
+            <div style={styles.newsList}>
+              {newsItems.map((item, index) => (
+                  <article
+                      key={item.id}
+                      style={{
+                        ...styles.newsRow,
+                        borderBottom:
+                            index === newsItems.length - 1
+                                ? "none"
+                                : "1px solid rgba(148, 163, 184, 0.12)",
+                      }}
+                  >
+                    <div style={styles.newsMetaColumn}>
+                      <span style={styles.newsCategory}>{item.category}</span>
+                      <span style={styles.newsTime}>{item.time}</span>
+                    </div>
 
-        <section style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Market News</h2>
-            <span style={styles.sectionMeta}>Latest developments affecting markets</span>
-          </div>
+                    <div style={styles.newsContentColumn}>
+                      <h3 style={styles.newsTitle}>{item.title}</h3>
+                      <p style={styles.newsSummary}>{item.summary}</p>
+                    </div>
+                  </article>
+              ))}
+            </div>
+          </section>
 
-          <div style={styles.newsList}>
-            {newsItems.map((item, index) => (
-              <article
-                key={item.id}
-                style={{
-                  ...styles.newsRow,
-                  borderBottom:
-                    index === newsItems.length - 1
-                      ? "none"
-                      : "1px solid rgba(148, 163, 184, 0.12)",
-                }}
-              >
-                <div style={styles.newsMetaColumn}>
-                  <span style={styles.newsCategory}>{item.category}</span>
-                  <span style={styles.newsTime}>{item.time}</span>
-                </div>
-
-                <div style={styles.newsContentColumn}>
-                  <h3 style={styles.newsTitle}>{item.title}</h3>
-                  <p style={styles.newsSummary}>{item.summary}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section style={styles.sloganSection}>
-          <img src={slogan} alt="Trust and Believe" style={styles.sloganImage} />
-        </section>
+          <section style={styles.sloganSection}>
+            <img src={slogan} alt="Trust and Believe" style={styles.sloganImage} />
+          </section>
+        </div>
       </div>
-    </div>
   );
 }
 
@@ -227,7 +225,7 @@ const styles = {
     backgroundColor: "#050b14",
     color: "#e5e7eb",
     fontFamily:
-      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     padding: "0",
   },
 
@@ -270,40 +268,6 @@ const styles = {
     fontWeight: 700,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
-  },
-
-  marketTicker: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    whiteSpace: "nowrap",
-    overflowX: "auto",
-    scrollbarWidth: "none",
-    msOverflowStyle: "none",
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-
-  tickerItem: {
-    fontSize: "14px",
-    color: "#e5e7eb",
-    fontWeight: 500,
-  },
-
-  tickerDivider: {
-    color: "rgba(148, 163, 184, 0.45)",
-  },
-
-  positive: {
-    color: "#22c55e",
-    fontWeight: 700,
-    marginLeft: "6px",
-  },
-
-  neutral: {
-    color: "#cbd5e1",
-    fontWeight: 700,
-    marginLeft: "6px",
   },
 
   heroSection: {
@@ -381,18 +345,18 @@ const styles = {
 
   twoColumnSection: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr", // 改为 "1fr" 以全宽显示
+    gridTemplateColumns: "1fr 1fr",
     borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
   },
 
   columnPanelLeft: {
-    padding: "18px 24px 18px 0", // 改为 "18px 0"
-    borderRight: "1px solid rgba(148, 163, 184, 0.18)", // 移除右边框
+    padding: "18px 24px 18px 0",
+    borderRight: "1px solid rgba(148, 163, 184, 0.18)",
     minWidth: 0,
   },
 
   columnPanelRight: {
-    padding: "18px 0 18px 24px", // 改为 "18px 0"
+    padding: "18px 0 18px 24px",
     minWidth: 0,
   },
 
