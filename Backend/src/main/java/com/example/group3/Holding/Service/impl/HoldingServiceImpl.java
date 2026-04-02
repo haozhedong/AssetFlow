@@ -149,7 +149,7 @@ public class HoldingServiceImpl implements HoldingService {
     }
 
     @Override
-    public HoldingResponse updateHolding(Long id, UpdateHoldingRequest request) {
+    public HoldingDetailResponse updateHolding(Long id, UpdateHoldingRequest request) {
         Holding existingHolding = holdingMapper.findById(id);
         if (existingHolding == null) {
             throw new RuntimeException("Holding not found, id = " + id);
@@ -166,7 +166,7 @@ public class HoldingServiceImpl implements HoldingService {
         existingHolding.setNotes(request.getNotes());
 
         holdingMapper.updateById(existingHolding);
-        return toResponse(holdingMapper.findById(id));
+        return toDetailResponse(holdingMapper.findById(id));
     }
 
     @Override
@@ -176,10 +176,10 @@ public class HoldingServiceImpl implements HoldingService {
             throw new RuntimeException("Holding not found, id = " + id);
         }
 
-        if (existingHolding.getQuantity() != null
-                && existingHolding.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
-            throw new RuntimeException("Cannot delete holding with remaining quantity");
-        }
+//        if (existingHolding.getQuantity() != null
+//                && existingHolding.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
+//            throw new RuntimeException("Cannot delete holding with remaining quantity");
+//        }
 
         holdingMapper.deleteById(id);
     }
@@ -373,7 +373,7 @@ public class HoldingServiceImpl implements HoldingService {
         }
 
         // 获取实时价格
-        assetMapper.insert(asset);
+        // assetMapper.insert(asset);
 
         PriceResponseDTO latestPriceResponse = marketDataProvider.fetchPrice(holding.getAssetId());
 
