@@ -8,6 +8,7 @@ import HoldingsTable from "../components/HoldingsTable";
 import slogan from "../assets/slogan.png";
 import WeatherWidget from "../components/WeatherWidget";
 import MarketTicker from "../components/MarketTicker";
+import TradingViewWidgets from "../components/TradingViewWidgets";
 
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
@@ -178,6 +179,8 @@ export default function DashboardPage() {
               <HoldingsTable data={dashboardData?.topHoldings || []} />
             </div>
           </section>
+
+          <TradingViewWidgets />
 
           <section style={styles.section}>
             <div style={styles.sectionHeader}>
