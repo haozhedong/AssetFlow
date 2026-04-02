@@ -38,7 +38,7 @@ CREATE TABLE transactions (
     quantity DECIMAL(18,4),
     price DECIMAL(18,4),
     fee DECIMAL(18,4),
-    transaction_date DATE,
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     account_name VARCHAR(100),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
