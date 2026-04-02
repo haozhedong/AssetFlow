@@ -52,8 +52,6 @@ export default function DashboardPage() {
     );
   }
 
-  const portfolioValue = dashboardData?.totalValue ?? "$128,450.20";
-  const dailyPnl = dashboardData?.dailyPnl ?? "+2.14%";
   const userName = "Haozhe";
 
   const newsItems = [
@@ -108,25 +106,6 @@ export default function DashboardPage() {
               <p style={styles.heroSubtitle}>
                 Track your holdings, allocation, performance, and market context in one place.
               </p>
-            </div>
-
-            <div style={styles.heroRight}>
-              <div style={styles.inlineMetric}>
-                <span style={styles.inlineMetricLabel}>Portfolio Value</span>
-                <span style={styles.inlineMetricValue}>{portfolioValue}</span>
-              </div>
-
-              <div style={styles.inlineMetric}>
-                <span style={styles.inlineMetricLabel}>Today</span>
-                <span
-                    style={{
-                      ...styles.inlineMetricValue,
-                      color: String(dailyPnl).includes("-") ? "#ef4444" : "#22c55e",
-                    }}
-                >
-                {dailyPnl}
-              </span>
-              </div>
             </div>
           </section>
 
@@ -311,34 +290,6 @@ const styles = {
     lineHeight: 1.5,
     color: "#94a3b8",
     maxWidth: "700px",
-  },
-
-  heroRight: {
-    display: "flex",
-    alignItems: "stretch",
-    gap: "24px",
-    flexWrap: "wrap",
-  },
-
-  inlineMetric: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    minWidth: "180px",
-    paddingLeft: "24px",
-    borderLeft: "1px solid rgba(148, 163, 184, 0.18)",
-  },
-
-  inlineMetricLabel: {
-    fontSize: "13px",
-    color: "#94a3b8",
-    marginBottom: "8px",
-  },
-
-  inlineMetricValue: {
-    fontSize: "22px",
-    fontWeight: 700,
-    color: "#f8fafc",
   },
 
   section: {

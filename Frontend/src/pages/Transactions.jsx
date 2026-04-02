@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   getAllTransactions,
   createBuyTransaction,
@@ -15,6 +15,16 @@ const emptyForm = {
   notes: "",
 };
 
+const emptySuccessModal = {
+  isOpen: false,
+  transactionType: "BUY",
+  symbol: "",
+  previousAverageCost: 0,
+  currentAverageCost: 0,
+  currentPrice: 0,
+  remainingQuantity: 0,
+};
+
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [selectedType, setSelectedType] = useState("BUY");
@@ -25,15 +35,7 @@ export default function Transactions() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // 新增：用于展示交易成功弹窗
-  const [successModal, setSuccessModal] = useState({
-    isOpen: false,
-    transactionType: "BUY",
-    symbol: "",
-    previousAverageCost: 0,
-    currentAverageCost: 0,
-    remainingQuantity: 0,
-  });
+  const [successModal, setSuccessModal] = useState(emptySuccessModal);
 
   const [filters, setFilters] = useState({
     symbol: "",
@@ -98,11 +100,11 @@ export default function Transactions() {
       };
 
       if (!payload.symbol) {
-        throw new Error("symbol is required");
+        throw new Error("Symbol is required");
       }
 
       if (!payload.quantity || payload.quantity <= 0) {
-        throw new Error("quantity must be greater than 0");
+        throw new Error("Quantity must be greater than 0");
       }
 
       let result;
@@ -112,14 +114,14 @@ export default function Transactions() {
         result = await createSellTransaction(payload);
       }
 
-      // 显示交易成功弹窗
       setSuccessModal({
         isOpen: true,
-        transactionType: result.transactionType,
-        symbol: result.symbol,
-        previousAverageCost: result.previousAverageCost,
-        currentAverageCost: result.currentAverageCost,
-        remainingQuantity: result.remainingQuantity,
+        transactionType: result.transactionType || selectedType,
+        symbol: result.symbol || payload.symbol,
+        previousAverageCost: Number(result.previousAverageCost ?? 0),
+        currentAverageCost: Number(result.currentAverageCost ?? 0),
+        currentPrice: Number(result.price ?? 0),
+        remainingQuantity: Number(result.remainingQuantity ?? 0),
       });
 
       setFormData({
@@ -171,14 +173,7 @@ export default function Transactions() {
   }
 
   function closeSuccessModal() {
-    setSuccessModal({
-      isOpen: false,
-      transactionType: "BUY",
-      symbol: "",
-      previousAverageCost: 0,
-      currentAverageCost: 0,
-      remainingQuantity: 0,
-    });
+    setSuccessModal(emptySuccessModal);
   }
 
   const filteredTransactions = useMemo(() => {
@@ -223,10 +218,6 @@ export default function Transactions() {
     });
   }, [transactions, filters]);
 
-  function formatNumber(value, digits = 2) {
-    return Number(value ?? 0).toFixed(digits);
-  }
-
   function formatQuantity(value) {
     return Math.round(Number(value ?? 0)).toLocaleString();
   }
@@ -247,20 +238,21 @@ export default function Transactions() {
     return String(type || "").toUpperCase() === "BUY" ? "#22c55e" : "#f97316";
   }
 
-  const isBuy = successModal.transactionType === "buy" || successModal.transactionType === "BUY";
+  const isBuy =
+      successModal.transactionType === "buy" ||
+      successModal.transactionType === "BUY";
 
   return (
       <div style={styles.page}>
-        {/* 交易成功弹窗 */}
         {successModal.isOpen && (
             <div style={styles.modalOverlay} onClick={closeSuccessModal}>
-              <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-                <div style={styles.modalHeader}>
-                  <h3 style={styles.modalTitle}>
+              <div style={styles.successModal} onClick={(e) => e.stopPropagation()}>
+                <div style={styles.successModalHeader}>
+                  <h3 style={styles.successModalTitle}>
                     {isBuy ? "Purchase Successful" : "Sale Successful"}
                   </h3>
                   <button
-                      style={styles.modalCloseBtn}
+                      style={styles.successModalCloseBtn}
                       onClick={closeSuccessModal}
                       type="button"
                   >
@@ -268,7 +260,7 @@ export default function Transactions() {
                   </button>
                 </div>
 
-                <div style={styles.modalContent}>
+                <div style={styles.successModalBody}>
                   <div
                       style={{
                         ...styles.successSymbol,
@@ -278,48 +270,55 @@ export default function Transactions() {
                     {successModal.symbol}
                   </div>
 
-                  {/* 买入显示均价变化 */}
                   {isBuy ? (
-                      <div style={styles.priceComparisonGrid}>
-                        <div style={styles.priceItem}>
-                          <div style={styles.priceLabel}>Previous Average Cost</div>
-                          <div style={styles.priceValue}>
+                      <div style={styles.buyComparisonGrid}>
+                        <div style={styles.summaryCard}>
+                          <div style={styles.summaryLabel}>Previous Average Cost</div>
+                          <div style={styles.summaryValue}>
                             {formatMoney(successModal.previousAverageCost)}
                           </div>
                         </div>
 
-                        <div style={styles.priceArrow}>→</div>
+                        <div style={styles.summaryArrow}>→</div>
 
-                        <div style={styles.priceItem}>
-                          <div style={styles.priceLabel}>Current Average Cost</div>
-                          <div style={styles.priceValue}>
+                        <div style={styles.summaryCard}>
+                          <div style={styles.summaryLabel}>Current Average Cost</div>
+                          <div style={styles.summaryValue}>
                             {formatMoney(successModal.currentAverageCost)}
                           </div>
                         </div>
                       </div>
                   ) : (
-                      // 卖出显示均价（不变）和剩余数量
-                      <div style={styles.priceComparisonGrid}>
-                        <div style={styles.priceItem}>
-                          <div style={styles.priceLabel}>Average Cost</div>
-                          <div style={styles.priceValue}>
-                            {formatMoney(successModal.currentAverageCost)}
+                      <>
+                        <div style={styles.sellComparisonGrid}>
+                          <div style={styles.summaryCard}>
+                            <div style={styles.summaryLabel}>Previous Average Cost</div>
+                            <div style={styles.summaryValue}>
+                              {formatMoney(successModal.previousAverageCost)}
+                            </div>
+                          </div>
+
+                          <div style={styles.summaryArrow}>→</div>
+
+                          <div style={styles.summaryCard}>
+                            <div style={styles.summaryLabel}>Current Sell Price</div>
+                            <div style={styles.summaryValue}>
+                              {formatMoney(successModal.currentPrice)}
+                            </div>
                           </div>
                         </div>
 
-                        <div style={styles.priceArrow}>→</div>
-
-                        <div style={styles.priceItem}>
-                          <div style={styles.priceLabel}>Remaining Quantity</div>
-                          <div style={styles.priceValue}>
+                        <div style={styles.remainingQuantityCard}>
+                          <div style={styles.summaryLabel}>Remaining Quantity</div>
+                          <div style={styles.remainingQuantityValue}>
                             {formatQuantity(successModal.remainingQuantity)}
                           </div>
                         </div>
-                      </div>
+                      </>
                   )}
 
                   <button
-                      style={styles.modalConfirmBtn}
+                      style={styles.successModalConfirmBtn}
                       onClick={closeSuccessModal}
                       type="button"
                   >
@@ -342,14 +341,22 @@ export default function Transactions() {
 
           <div style={styles.heroActions}>
             <button
-                style={selectedType === "BUY" ? styles.primaryBtn : styles.secondaryBtnCompact}
+                style={
+                  selectedType === "BUY"
+                      ? styles.primaryBtn
+                      : styles.secondaryBtnCompact
+                }
                 type="button"
                 onClick={() => handleChooseType("BUY")}
             >
               Buy
             </button>
             <button
-                style={selectedType === "SELL" ? styles.primaryBtn : styles.secondaryBtnCompact}
+                style={
+                  selectedType === "SELL"
+                      ? styles.primaryBtn
+                      : styles.secondaryBtnCompact
+                }
                 type="button"
                 onClick={() => handleChooseType("SELL")}
             >
@@ -419,7 +426,7 @@ export default function Transactions() {
               </div>
 
               <div style={styles.fieldGroup}>
-                <label style={styles.label}>Account Name</label>
+                <label style={styles.label}>Account</label>
                 <input
                     style={styles.input}
                     name="accountName"
@@ -436,13 +443,13 @@ export default function Transactions() {
                     name="notes"
                     value={formData.notes}
                     onChange={handleFormChange}
-                    placeholder="Optional note"
+                    placeholder="Optional notes"
                 />
               </div>
             </div>
 
-            <div style={styles.submitRow}>
-              <button type="submit" style={styles.primaryBtn} disabled={submitting}>
+            <div style={styles.formActions}>
+              <button style={styles.primaryBtn} type="submit" disabled={submitting}>
                 {submitting
                     ? "Submitting..."
                     : selectedType === "BUY"
@@ -463,23 +470,26 @@ export default function Transactions() {
               <label style={styles.label}>Symbol</label>
               <input
                   style={styles.input}
-                  placeholder="e.g. AAPL"
                   value={filters.symbol}
                   onChange={(e) =>
-                      setFilters({ ...filters, symbol: e.target.value })
+                      setFilters((prev) => ({ ...prev, symbol: e.target.value }))
                   }
+                  placeholder="e.g. AAPL"
               />
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Transaction Type</label>
+              <label style={styles.label}>Type</label>
               <input
                   style={styles.input}
-                  placeholder="BUY / SELL"
                   value={filters.transactionType}
                   onChange={(e) =>
-                      setFilters({ ...filters, transactionType: e.target.value })
+                      setFilters((prev) => ({
+                        ...prev,
+                        transactionType: e.target.value,
+                      }))
                   }
+                  placeholder="BUY / SELL"
               />
             </div>
 
@@ -487,11 +497,11 @@ export default function Transactions() {
               <label style={styles.label}>Account</label>
               <input
                   style={styles.input}
-                  placeholder="account name"
                   value={filters.accountName}
                   onChange={(e) =>
-                      setFilters({ ...filters, accountName: e.target.value })
+                      setFilters((prev) => ({ ...prev, accountName: e.target.value }))
                   }
+                  placeholder="Main Account"
               />
             </div>
 
@@ -499,11 +509,11 @@ export default function Transactions() {
               <label style={styles.label}>Keyword</label>
               <input
                   style={styles.input}
-                  placeholder="search all fields"
                   value={filters.keyword}
                   onChange={(e) =>
-                      setFilters({ ...filters, keyword: e.target.value })
+                      setFilters((prev) => ({ ...prev, keyword: e.target.value }))
                   }
+                  placeholder="Search symbol, notes..."
               />
             </div>
           </div>
@@ -513,7 +523,7 @@ export default function Transactions() {
           <div style={styles.sectionBar}>
             <h2 style={styles.sectionTitle}>Transaction History</h2>
             <span style={styles.sectionMeta}>
-            {filteredTransactions.length} transaction
+            {filteredTransactions.length} record
               {filteredTransactions.length === 1 ? "" : "s"}
           </span>
           </div>
@@ -525,13 +535,14 @@ export default function Transactions() {
                 <table style={styles.table}>
                   <thead>
                   <tr>
-                    <th style={styles.th}>Date</th>
+                    <th style={styles.th}>ID</th>
+                    <th style={styles.th}>Symbol</th>
                     <th style={styles.th}>Type</th>
-                    <th style={styles.th}>Asset</th>
                     <th style={styles.th}>Qty</th>
                     <th style={styles.th}>Price</th>
                     <th style={styles.th}>Fee</th>
                     <th style={styles.th}>Account</th>
+                    <th style={styles.th}>Transaction Date</th>
                     <th style={styles.thActions}>Actions</th>
                   </tr>
                   </thead>
@@ -539,15 +550,13 @@ export default function Transactions() {
                   <tbody>
                   {filteredTransactions.map((item) => {
                     const isExpanded = expandedTransactionId === item.id;
-                    const isSelected = selectedTransaction?.id === item.id;
 
                     return (
-                        <>
+                        <Fragment key={item.id}>
                           <tr
-                              key={`row-${item.id}`}
                               style={{
                                 ...styles.tableRow,
-                                background: isSelected
+                                background: isExpanded
                                     ? "rgba(59,130,246,0.08)"
                                     : "transparent",
                               }}
@@ -556,7 +565,13 @@ export default function Transactions() {
                                 style={{ ...styles.td, cursor: "pointer" }}
                                 onClick={() => handleRowClick(item)}
                             >
-                              {formatDateTime(item.transactionDate)}
+                              {item.id ?? "-"}
+                            </td>
+                            <td
+                                style={{ ...styles.tdSymbol, cursor: "pointer" }}
+                                onClick={() => handleRowClick(item)}
+                            >
+                              {item.symbol || "-"}
                             </td>
                             <td
                                 style={{
@@ -567,13 +582,7 @@ export default function Transactions() {
                                 }}
                                 onClick={() => handleRowClick(item)}
                             >
-                              {item.transactionType || "-"}
-                            </td>
-                            <td
-                                style={{ ...styles.tdSymbol, cursor: "pointer" }}
-                                onClick={() => handleRowClick(item)}
-                            >
-                              {item.symbol || "-"}
+                              {String(item.transactionType || "-").toUpperCase()}
                             </td>
                             <td
                                 style={{ ...styles.td, cursor: "pointer" }}
@@ -599,6 +608,12 @@ export default function Transactions() {
                             >
                               {item.accountName || "-"}
                             </td>
+                            <td
+                                style={{ ...styles.td, cursor: "pointer" }}
+                                onClick={() => handleRowClick(item)}
+                            >
+                              {formatDateTime(item.transactionDate)}
+                            </td>
                             <td style={styles.tdActions}>
                               <button
                                   type="button"
@@ -611,16 +626,17 @@ export default function Transactions() {
                           </tr>
 
                           {isExpanded && (
-                              <tr key={`detail-${item.id}`}>
-                                <td colSpan={8} style={styles.detailCell}>
+                              <tr>
+                                <td colSpan={9} style={styles.detailCell}>
                                   <div style={styles.detailPanel}>
                                     <div style={styles.detailHeader}>
                                       <div>
                                         <div style={styles.detailTitle}>
-                                          {item.symbol || "-"} · {item.transactionType || "-"}
+                                          {item.symbol || "-"} ·{" "}
+                                          {String(item.transactionType || "-").toUpperCase()}
                                         </div>
                                         <div style={styles.detailSubtitle}>
-                                          Click the row again to collapse.
+                                          Click the same row again to collapse.
                                         </div>
                                       </div>
 
@@ -628,16 +644,13 @@ export default function Transactions() {
                                   <span style={styles.detailStat}>
                                     Qty {formatQuantity(item.quantity)}
                                   </span>
-                                        <span style={styles.detailStat}>
-                                    Price {formatMoney(item.price)}
-                                  </span>
                                         <span
                                             style={{
                                               ...styles.detailStat,
                                               color: getTypeColor(item.transactionType),
                                             }}
                                         >
-                                    {item.transactionType || "-"}
+                                    {String(item.transactionType || "-").toUpperCase()}
                                   </span>
                                       </div>
                                     </div>
@@ -645,16 +658,16 @@ export default function Transactions() {
                                     <div style={styles.detailGrid}>
                                       <div style={styles.detailItem}>
                                         <span style={styles.detailKey}>Transaction ID</span>
-                                        <span style={styles.detailValue}>{item.id}</span>
+                                        <span style={styles.detailValue}>
+                                    {item.id ?? "-"}
+                                  </span>
                                       </div>
-
                                       <div style={styles.detailItem}>
                                         <span style={styles.detailKey}>Symbol</span>
                                         <span style={styles.detailValue}>
                                     {item.symbol || "-"}
                                   </span>
                                       </div>
-
                                       <div style={styles.detailItem}>
                                         <span style={styles.detailKey}>Type</span>
                                         <span
@@ -663,52 +676,47 @@ export default function Transactions() {
                                               color: getTypeColor(item.transactionType),
                                             }}
                                         >
-                                    {item.transactionType || "-"}
+                                    {String(item.transactionType || "-").toUpperCase()}
                                   </span>
                                       </div>
-
                                       <div style={styles.detailItem}>
                                         <span style={styles.detailKey}>Quantity</span>
                                         <span style={styles.detailValue}>
                                     {formatQuantity(item.quantity)}
                                   </span>
                                       </div>
-
                                       <div style={styles.detailItem}>
                                         <span style={styles.detailKey}>Price</span>
                                         <span style={styles.detailValue}>
                                     {formatMoney(item.price)}
                                   </span>
                                       </div>
-
                                       <div style={styles.detailItem}>
                                         <span style={styles.detailKey}>Fee</span>
                                         <span style={styles.detailValue}>
                                     {formatMoney(item.fee)}
                                   </span>
                                       </div>
-
                                       <div style={styles.detailItem}>
                                         <span style={styles.detailKey}>Account</span>
                                         <span style={styles.detailValue}>
                                     {item.accountName || "-"}
                                   </span>
                                       </div>
-
                                       <div style={styles.detailItem}>
-                                        <span style={styles.detailKey}>Transaction Date</span>
+                                  <span style={styles.detailKey}>
+                                    Transaction Date
+                                  </span>
                                         <span style={styles.detailValue}>
                                     {formatDateTime(item.transactionDate)}
                                   </span>
                                       </div>
-
                                       <div style={styles.detailItemWide}>
                                         <span style={styles.detailKey}>Notes</span>
                                         <span style={styles.detailValue}>
                                     {item.notes || "-"}
                                   </span>
                                       </div>
-
                                       <div style={styles.detailItem}>
                                         <span style={styles.detailKey}>Created At</span>
                                         <span style={styles.detailValue}>
@@ -720,7 +728,7 @@ export default function Transactions() {
                                 </td>
                               </tr>
                           )}
-                        </>
+                        </Fragment>
                     );
                   })}
                   </tbody>
@@ -742,113 +750,6 @@ const styles = {
     flexDirection: "column",
     gap: "18px",
     color: "#e2e8f0",
-  },
-
-  // 弹窗样式
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: "rgba(0, 0, 0, 0.6)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-  },
-
-  modal: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    width: "90%",
-    maxWidth: "500px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
-  },
-
-  modalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "20px",
-    borderBottom: "1px solid #334155",
-  },
-
-  modalTitle: {
-    margin: 0,
-    fontSize: "18px",
-    fontWeight: 700,
-    color: "#f8fafc",
-  },
-
-  modalCloseBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#94a3b8",
-    fontSize: "28px",
-    cursor: "pointer",
-    padding: "0",
-    lineHeight: 1,
-  },
-
-  modalContent: {
-    padding: "24px 20px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-
-  successSymbol: {
-    fontSize: "32px",
-    fontWeight: 700,
-    textAlign: "center",
-  },
-
-  priceComparisonGrid: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "16px",
-  },
-
-  priceItem: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    padding: "12px",
-    background: "#0f172a",
-    border: "1px solid #334155",
-  },
-
-  priceLabel: {
-    fontSize: "12px",
-    color: "#94a3b8",
-    letterSpacing: "0.06em",
-    textTransform: "uppercase",
-  },
-
-  priceValue: {
-    fontSize: "18px",
-    fontWeight: 700,
-    color: "#e2e8f0",
-  },
-
-  priceArrow: {
-    fontSize: "20px",
-    color: "#60a5fa",
-    fontWeight: 700,
-  },
-
-  modalConfirmBtn: {
-    background: "#3b82f6",
-    color: "#fff",
-    border: "1px solid #3b82f6",
-    padding: "12px 20px",
-    fontSize: "14px",
-    fontWeight: 700,
-    cursor: "pointer",
-    marginTop: "8px",
   },
 
   hero: {
@@ -911,12 +812,6 @@ const styles = {
     borderBottom: "1px solid #334155",
   },
 
-  tableSection: {
-    background: "#1e293b",
-    borderTop: "1px solid #334155",
-    borderBottom: "1px solid #334155",
-  },
-
   sectionBar: {
     display: "flex",
     justifyContent: "space-between",
@@ -941,16 +836,21 @@ const styles = {
   },
 
   form: {
+    padding: "14px 0 16px",
     display: "flex",
     flexDirection: "column",
     gap: "16px",
-    padding: "16px 0",
   },
 
   formGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "16px",
+    gap: "14px",
+  },
+
+  formActions: {
+    display: "flex",
+    justifyContent: "flex-start",
   },
 
   filtersGrid: {
@@ -983,9 +883,10 @@ const styles = {
     outline: "none",
   },
 
-  submitRow: {
-    display: "flex",
-    justifyContent: "flex-end",
+  tableSection: {
+    background: "#1e293b",
+    borderTop: "1px solid #334155",
+    borderBottom: "1px solid #334155",
   },
 
   tableWrapper: {
@@ -1167,5 +1068,136 @@ const styles = {
     color: "#94a3b8",
     fontSize: "14px",
     padding: "16px 0",
+  },
+
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0,0,0,0.62)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: "20px",
+  },
+
+  successModal: {
+    width: "100%",
+    maxWidth: "420px",   // 再砍一半
+    background: "#1e293b",
+    border: "1px solid #334155",
+    boxShadow: "0 10px 28px rgba(0,0,0,0.45)",
+  },
+
+  successModalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "10px 12px",
+    borderBottom: "1px solid #334155",
+  },
+
+  successModalTitle: {
+    margin: 0,
+    color: "#f8fafc",
+    fontSize: "14px",
+    fontWeight: 700,
+  },
+
+  successModalCloseBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#94a3b8",
+    fontSize: "22px",
+    lineHeight: 1,
+    cursor: "pointer",
+    width: "22px",
+    height: "22px",
+  },
+
+  successModalBody: {
+    padding: "14px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+
+  successSymbol: {
+    textAlign: "center",
+    fontSize: "28px",
+    fontWeight: 800,
+    lineHeight: 1,
+  },
+
+  buyComparisonGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  sellComparisonGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  summaryCard: {
+    background: "#020b24",
+    border: "1px solid #334155",
+    padding: "10px",
+    minHeight: "70px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+  },
+
+  summaryLabel: {
+    fontSize: "9px",
+    color: "#94a3b8",
+    letterSpacing: "0.05em",
+    textTransform: "uppercase",
+    marginBottom: "4px",
+  },
+
+  summaryValue: {
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#e2e8f0",
+  },
+
+  summaryArrow: {
+    fontSize: "20px",
+    color: "#60a5fa",
+    fontWeight: 700,
+    textAlign: "center",
+  },
+
+  remainingQuantityCard: {
+    background: "#020b24",
+    border: "1px solid #334155",
+    padding: "10px",
+  },
+
+  remainingQuantityValue: {
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#e2e8f0",
+  },
+
+  successModalConfirmBtn: {
+    marginTop: "4px",
+    background: "#3b82f6",
+    color: "#fff",
+    border: "1px solid #3b82f6",
+    padding: "10px",
+    fontSize: "12px",
+    cursor: "pointer",
+    fontWeight: 700,
+    width: "100%",
   },
 };

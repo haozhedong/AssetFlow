@@ -46,6 +46,8 @@ export default function Holdings() {
   const [assetSearch, setAssetSearch] = useState("");
   const [newAssetData, setNewAssetData] = useState(emptyNewAsset);
 
+
+
   const [filters, setFilters] = useState({
     assetType: "",
     market: "",
@@ -245,19 +247,12 @@ export default function Holdings() {
       let savedHolding;
 
       if (formMode === "add") {
-        console.log("Calling createHolding for add mode");
         savedHolding = await createHolding(payload);
-        // Append the new holding to the list locally
-        setHoldings(prev => [...prev, savedHolding]);
       } else if (formMode === "edit" && selectedHolding?.id) {
-        console.log("Calling updateHolding for edit mode");
         savedHolding = await updateHolding(selectedHolding.id, payload);
-        // Update the existing holding in the list locally
-        setHoldings(prev => prev.map(h => h.id === selectedHolding.id ? savedHolding : h));
       }
 
-      // No need to fetch all holdings after local update
-      // await fetchHoldings();
+      await fetchHoldings();
 
       if (savedHolding?.id) {
         await handleSelectHolding(savedHolding.id);
