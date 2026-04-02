@@ -25,6 +25,16 @@ export default function Transactions() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // 新增：用于展示交易成功弹窗
+  const [successModal, setSuccessModal] = useState({
+    isOpen: false,
+    transactionType: "BUY",
+    symbol: "",
+    previousAverageCost: 0,
+    currentAverageCost: 0,
+    remainingQuantity: 0,
+  });
+
   const [filters, setFilters] = useState({
     symbol: "",
     transactionType: "",
@@ -95,11 +105,22 @@ export default function Transactions() {
         throw new Error("quantity must be greater than 0");
       }
 
+      let result;
       if (selectedType === "BUY") {
-        await createBuyTransaction(payload);
+        result = await createBuyTransaction(payload);
       } else {
-        await createSellTransaction(payload);
+        result = await createSellTransaction(payload);
       }
+
+      // 显示交易成功弹窗
+      setSuccessModal({
+        isOpen: true,
+        transactionType: result.transactionType,
+        symbol: result.symbol,
+        previousAverageCost: result.previousAverageCost,
+        currentAverageCost: result.currentAverageCost,
+        remainingQuantity: result.remainingQuantity,
+      });
 
       setFormData({
         ...emptyForm,
@@ -122,7 +143,7 @@ export default function Transactions() {
     }
 
     const confirmed = window.confirm(
-      `Delete transaction #${transaction.id} (${transaction.symbol || "-"})?`
+        `Delete transaction #${transaction.id} (${transaction.symbol || "-"})?`
     );
     if (!confirmed) return;
 
@@ -149,28 +170,39 @@ export default function Transactions() {
     setExpandedTransactionId((prev) => (prev === item.id ? null : item.id));
   }
 
+  function closeSuccessModal() {
+    setSuccessModal({
+      isOpen: false,
+      transactionType: "BUY",
+      symbol: "",
+      previousAverageCost: 0,
+      currentAverageCost: 0,
+      remainingQuantity: 0,
+    });
+  }
+
   const filteredTransactions = useMemo(() => {
     return transactions.filter((item) => {
       const symbolMatch = filters.symbol
-        ? String(item.symbol || "")
-            .toLowerCase()
-            .includes(filters.symbol.toLowerCase())
-        : true;
+          ? String(item.symbol || "")
+              .toLowerCase()
+              .includes(filters.symbol.toLowerCase())
+          : true;
 
       const typeMatch = filters.transactionType
-        ? String(item.transactionType || "")
-            .toLowerCase()
-            .includes(filters.transactionType.toLowerCase())
-        : true;
+          ? String(item.transactionType || "")
+              .toLowerCase()
+              .includes(filters.transactionType.toLowerCase())
+          : true;
 
       const accountMatch = filters.accountName
-        ? String(item.accountName || "")
-            .toLowerCase()
-            .includes(filters.accountName.toLowerCase())
-        : true;
+          ? String(item.accountName || "")
+              .toLowerCase()
+              .includes(filters.accountName.toLowerCase())
+          : true;
 
       const keywordMatch = filters.keyword
-        ? [
+          ? [
             item.id,
             item.symbol,
             item.transactionType,
@@ -182,10 +214,10 @@ export default function Transactions() {
             item.price,
             item.fee,
           ]
-            .join(" ")
-            .toLowerCase()
-            .includes(filters.keyword.toLowerCase())
-        : true;
+              .join(" ")
+              .toLowerCase()
+              .includes(filters.keyword.toLowerCase())
+          : true;
 
       return symbolMatch && typeMatch && accountMatch && keywordMatch;
     });
@@ -215,411 +247,492 @@ export default function Transactions() {
     return String(type || "").toUpperCase() === "BUY" ? "#22c55e" : "#f97316";
   }
 
+  const isBuy = successModal.transactionType === "buy" || successModal.transactionType === "BUY";
+
   return (
-    <div style={styles.page}>
-      <section style={styles.hero}>
-        <div>
-          <div style={styles.overline}>TRANSACTIONS</div>
-          <h1 style={styles.pageTitle}>Transaction Entry & History</h1>
-          <p style={styles.pageSubtitle}>
-            Record buy and sell activity by asset symbol, then review each trade
-            in a terminal-style history table.
-          </p>
-        </div>
+      <div style={styles.page}>
+        {/* 交易成功弹窗 */}
+        {successModal.isOpen && (
+            <div style={styles.modalOverlay} onClick={closeSuccessModal}>
+              <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+                <div style={styles.modalHeader}>
+                  <h3 style={styles.modalTitle}>
+                    {isBuy ? "Purchase Successful" : "Sale Successful"}
+                  </h3>
+                  <button
+                      style={styles.modalCloseBtn}
+                      onClick={closeSuccessModal}
+                      type="button"
+                  >
+                    ×
+                  </button>
+                </div>
 
-        <div style={styles.heroActions}>
-          <button
-            style={selectedType === "BUY" ? styles.primaryBtn : styles.secondaryBtnCompact}
-            type="button"
-            onClick={() => handleChooseType("BUY")}
-          >
-            Buy
-          </button>
-          <button
-            style={selectedType === "SELL" ? styles.primaryBtn : styles.secondaryBtnCompact}
-            type="button"
-            onClick={() => handleChooseType("SELL")}
-          >
-            Sell
-          </button>
-        </div>
-      </section>
+                <div style={styles.modalContent}>
+                  <div
+                      style={{
+                        ...styles.successSymbol,
+                        color: isBuy ? "#22c55e" : "#f97316",
+                      }}
+                  >
+                    {successModal.symbol}
+                  </div>
 
-      {error ? <div style={styles.error}>{error}</div> : null}
+                  {/* 买入显示均价变化 */}
+                  {isBuy ? (
+                      <div style={styles.priceComparisonGrid}>
+                        <div style={styles.priceItem}>
+                          <div style={styles.priceLabel}>Previous Average Cost</div>
+                          <div style={styles.priceValue}>
+                            {formatMoney(successModal.previousAverageCost)}
+                          </div>
+                        </div>
 
-      <section style={styles.entrySection}>
-        <div style={styles.sectionBar}>
-          <h2 style={styles.sectionTitle}>Transaction Entry</h2>
-          <span style={styles.sectionMeta}>
+                        <div style={styles.priceArrow}>→</div>
+
+                        <div style={styles.priceItem}>
+                          <div style={styles.priceLabel}>Current Average Cost</div>
+                          <div style={styles.priceValue}>
+                            {formatMoney(successModal.currentAverageCost)}
+                          </div>
+                        </div>
+                      </div>
+                  ) : (
+                      // 卖出显示均价（不变）和剩余数量
+                      <div style={styles.priceComparisonGrid}>
+                        <div style={styles.priceItem}>
+                          <div style={styles.priceLabel}>Average Cost</div>
+                          <div style={styles.priceValue}>
+                            {formatMoney(successModal.currentAverageCost)}
+                          </div>
+                        </div>
+
+                        <div style={styles.priceArrow}>→</div>
+
+                        <div style={styles.priceItem}>
+                          <div style={styles.priceLabel}>Remaining Quantity</div>
+                          <div style={styles.priceValue}>
+                            {formatQuantity(successModal.remainingQuantity)}
+                          </div>
+                        </div>
+                      </div>
+                  )}
+
+                  <button
+                      style={styles.modalConfirmBtn}
+                      onClick={closeSuccessModal}
+                      type="button"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+        )}
+
+        <section style={styles.hero}>
+          <div>
+            <div style={styles.overline}>TRANSACTIONS</div>
+            <h1 style={styles.pageTitle}>Transaction Entry & History</h1>
+            <p style={styles.pageSubtitle}>
+              Record buy and sell activity by asset symbol, then review each trade
+              in a terminal-style history table.
+            </p>
+          </div>
+
+          <div style={styles.heroActions}>
+            <button
+                style={selectedType === "BUY" ? styles.primaryBtn : styles.secondaryBtnCompact}
+                type="button"
+                onClick={() => handleChooseType("BUY")}
+            >
+              Buy
+            </button>
+            <button
+                style={selectedType === "SELL" ? styles.primaryBtn : styles.secondaryBtnCompact}
+                type="button"
+                onClick={() => handleChooseType("SELL")}
+            >
+              Sell
+            </button>
+          </div>
+        </section>
+
+        {error ? <div style={styles.error}>{error}</div> : null}
+
+        <section style={styles.entrySection}>
+          <div style={styles.sectionBar}>
+            <h2 style={styles.sectionTitle}>Transaction Entry</h2>
+            <span style={styles.sectionMeta}>
             {selectedType === "BUY" ? "Buy Order" : "Sell Order"}
           </span>
-        </div>
+          </div>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.formGrid}>
+          <form onSubmit={handleSubmit} style={styles.form}>
+            <div style={styles.formGrid}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Asset Symbol</label>
+                <input
+                    style={styles.input}
+                    name="symbol"
+                    value={formData.symbol}
+                    onChange={handleFormChange}
+                    placeholder="e.g. AAPL"
+                />
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Transaction Type</label>
+                <input
+                    style={styles.input}
+                    name="transactionType"
+                    value={formData.transactionType}
+                    onChange={handleFormChange}
+                    readOnly
+                />
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Quantity</label>
+                <input
+                    style={styles.input}
+                    type="number"
+                    step="0.0001"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleFormChange}
+                    placeholder="e.g. 10"
+                />
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Fee</label>
+                <input
+                    style={styles.input}
+                    type="number"
+                    step="0.01"
+                    name="fee"
+                    value={formData.fee}
+                    onChange={handleFormChange}
+                    placeholder="e.g. 1.50"
+                />
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Account Name</label>
+                <input
+                    style={styles.input}
+                    name="accountName"
+                    value={formData.accountName}
+                    onChange={handleFormChange}
+                    placeholder="Main Account"
+                />
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Notes</label>
+                <input
+                    style={styles.input}
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleFormChange}
+                    placeholder="Optional note"
+                />
+              </div>
+            </div>
+
+            <div style={styles.submitRow}>
+              <button type="submit" style={styles.primaryBtn} disabled={submitting}>
+                {submitting
+                    ? "Submitting..."
+                    : selectedType === "BUY"
+                        ? "Submit Buy"
+                        : "Submit Sell"}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section style={styles.filtersSection}>
+          <div style={styles.sectionBar}>
+            <h2 style={styles.sectionTitle}>Filters</h2>
+          </div>
+
+          <div style={styles.filtersGrid}>
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Asset Symbol</label>
+              <label style={styles.label}>Symbol</label>
               <input
-                style={styles.input}
-                name="symbol"
-                value={formData.symbol}
-                onChange={handleFormChange}
-                placeholder="e.g. AAPL"
+                  style={styles.input}
+                  placeholder="e.g. AAPL"
+                  value={filters.symbol}
+                  onChange={(e) =>
+                      setFilters({ ...filters, symbol: e.target.value })
+                  }
               />
             </div>
 
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Transaction Type</label>
               <input
-                style={styles.input}
-                name="transactionType"
-                value={formData.transactionType}
-                onChange={handleFormChange}
-                readOnly
+                  style={styles.input}
+                  placeholder="BUY / SELL"
+                  value={filters.transactionType}
+                  onChange={(e) =>
+                      setFilters({ ...filters, transactionType: e.target.value })
+                  }
               />
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Quantity</label>
+              <label style={styles.label}>Account</label>
               <input
-                style={styles.input}
-                type="number"
-                step="0.0001"
-                name="quantity"
-                value={formData.quantity}
-                onChange={handleFormChange}
-                placeholder="e.g. 10"
+                  style={styles.input}
+                  placeholder="account name"
+                  value={filters.accountName}
+                  onChange={(e) =>
+                      setFilters({ ...filters, accountName: e.target.value })
+                  }
               />
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Fee</label>
+              <label style={styles.label}>Keyword</label>
               <input
-                style={styles.input}
-                type="number"
-                step="0.01"
-                name="fee"
-                value={formData.fee}
-                onChange={handleFormChange}
-                placeholder="e.g. 1.50"
-              />
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Account Name</label>
-              <input
-                style={styles.input}
-                name="accountName"
-                value={formData.accountName}
-                onChange={handleFormChange}
-                placeholder="Main Account"
-              />
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Notes</label>
-              <input
-                style={styles.input}
-                name="notes"
-                value={formData.notes}
-                onChange={handleFormChange}
-                placeholder="Optional note"
+                  style={styles.input}
+                  placeholder="search all fields"
+                  value={filters.keyword}
+                  onChange={(e) =>
+                      setFilters({ ...filters, keyword: e.target.value })
+                  }
               />
             </div>
           </div>
+        </section>
 
-          <div style={styles.submitRow}>
-            <button type="submit" style={styles.primaryBtn} disabled={submitting}>
-              {submitting
-                ? "Submitting..."
-                : selectedType === "BUY"
-                ? "Submit Buy"
-                : "Submit Sell"}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section style={styles.filtersSection}>
-        <div style={styles.sectionBar}>
-          <h2 style={styles.sectionTitle}>Filters</h2>
-        </div>
-
-        <div style={styles.filtersGrid}>
-          <div style={styles.fieldGroup}>
-            <label style={styles.label}>Symbol</label>
-            <input
-              style={styles.input}
-              placeholder="e.g. AAPL"
-              value={filters.symbol}
-              onChange={(e) =>
-                setFilters({ ...filters, symbol: e.target.value })
-              }
-            />
-          </div>
-
-          <div style={styles.fieldGroup}>
-            <label style={styles.label}>Transaction Type</label>
-            <input
-              style={styles.input}
-              placeholder="BUY / SELL"
-              value={filters.transactionType}
-              onChange={(e) =>
-                setFilters({ ...filters, transactionType: e.target.value })
-              }
-            />
-          </div>
-
-          <div style={styles.fieldGroup}>
-            <label style={styles.label}>Account</label>
-            <input
-              style={styles.input}
-              placeholder="account name"
-              value={filters.accountName}
-              onChange={(e) =>
-                setFilters({ ...filters, accountName: e.target.value })
-              }
-            />
-          </div>
-
-          <div style={styles.fieldGroup}>
-            <label style={styles.label}>Keyword</label>
-            <input
-              style={styles.input}
-              placeholder="search all fields"
-              value={filters.keyword}
-              onChange={(e) =>
-                setFilters({ ...filters, keyword: e.target.value })
-              }
-            />
-          </div>
-        </div>
-      </section>
-
-      <section style={styles.tableSection}>
-        <div style={styles.sectionBar}>
-          <h2 style={styles.sectionTitle}>Transaction History</h2>
-          <span style={styles.sectionMeta}>
+        <section style={styles.tableSection}>
+          <div style={styles.sectionBar}>
+            <h2 style={styles.sectionTitle}>Transaction History</h2>
+            <span style={styles.sectionMeta}>
             {filteredTransactions.length} transaction
-            {filteredTransactions.length === 1 ? "" : "s"}
+              {filteredTransactions.length === 1 ? "" : "s"}
           </span>
-        </div>
+          </div>
 
-        {loading ? (
-          <div style={styles.empty}>Loading transactions...</div>
-        ) : (
-          <div style={styles.tableWrapper}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Date</th>
-                  <th style={styles.th}>Type</th>
-                  <th style={styles.th}>Asset</th>
-                  <th style={styles.th}>Qty</th>
-                  <th style={styles.th}>Price</th>
-                  <th style={styles.th}>Fee</th>
-                  <th style={styles.th}>Account</th>
-                  <th style={styles.thActions}>Actions</th>
-                </tr>
-              </thead>
+          {loading ? (
+              <div style={styles.empty}>Loading transactions...</div>
+          ) : (
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                  <tr>
+                    <th style={styles.th}>Date</th>
+                    <th style={styles.th}>Type</th>
+                    <th style={styles.th}>Asset</th>
+                    <th style={styles.th}>Qty</th>
+                    <th style={styles.th}>Price</th>
+                    <th style={styles.th}>Fee</th>
+                    <th style={styles.th}>Account</th>
+                    <th style={styles.thActions}>Actions</th>
+                  </tr>
+                  </thead>
 
-              <tbody>
-                {filteredTransactions.map((item) => {
-                  const isExpanded = expandedTransactionId === item.id;
-                  const isSelected = selectedTransaction?.id === item.id;
+                  <tbody>
+                  {filteredTransactions.map((item) => {
+                    const isExpanded = expandedTransactionId === item.id;
+                    const isSelected = selectedTransaction?.id === item.id;
 
-                  return (
-                    <>
-                      <tr
-                        key={`row-${item.id}`}
-                        style={{
-                          ...styles.tableRow,
-                          background: isSelected
-                            ? "rgba(59,130,246,0.08)"
-                            : "transparent",
-                        }}
-                      >
-                        <td
-                          style={{ ...styles.td, cursor: "pointer" }}
-                          onClick={() => handleRowClick(item)}
-                        >
-                          {formatDateTime(item.transactionDate)}
-                        </td>
-                        <td
-                          style={{
-                            ...styles.td,
-                            color: getTypeColor(item.transactionType),
-                            fontWeight: 700,
-                            cursor: "pointer",
-                          }}
-                          onClick={() => handleRowClick(item)}
-                        >
-                          {item.transactionType || "-"}
-                        </td>
-                        <td
-                          style={{ ...styles.tdSymbol, cursor: "pointer" }}
-                          onClick={() => handleRowClick(item)}
-                        >
-                          {item.symbol || "-"}
-                        </td>
-                        <td
-                          style={{ ...styles.td, cursor: "pointer" }}
-                          onClick={() => handleRowClick(item)}
-                        >
-                          {formatQuantity(item.quantity)}
-                        </td>
-                        <td
-                          style={{ ...styles.td, cursor: "pointer" }}
-                          onClick={() => handleRowClick(item)}
-                        >
-                          {formatMoney(item.price)}
-                        </td>
-                        <td
-                          style={{ ...styles.td, cursor: "pointer" }}
-                          onClick={() => handleRowClick(item)}
-                        >
-                          {formatMoney(item.fee)}
-                        </td>
-                        <td
-                          style={{ ...styles.td, cursor: "pointer" }}
-                          onClick={() => handleRowClick(item)}
-                        >
-                          {item.accountName || "-"}
-                        </td>
-                        <td style={styles.tdActions}>
-                          <button
-                            type="button"
-                            style={styles.rowDangerBtn}
-                            onClick={() => handleDelete(item)}
+                    return (
+                        <>
+                          <tr
+                              key={`row-${item.id}`}
+                              style={{
+                                ...styles.tableRow,
+                                background: isSelected
+                                    ? "rgba(59,130,246,0.08)"
+                                    : "transparent",
+                              }}
                           >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
+                            <td
+                                style={{ ...styles.td, cursor: "pointer" }}
+                                onClick={() => handleRowClick(item)}
+                            >
+                              {formatDateTime(item.transactionDate)}
+                            </td>
+                            <td
+                                style={{
+                                  ...styles.td,
+                                  color: getTypeColor(item.transactionType),
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                }}
+                                onClick={() => handleRowClick(item)}
+                            >
+                              {item.transactionType || "-"}
+                            </td>
+                            <td
+                                style={{ ...styles.tdSymbol, cursor: "pointer" }}
+                                onClick={() => handleRowClick(item)}
+                            >
+                              {item.symbol || "-"}
+                            </td>
+                            <td
+                                style={{ ...styles.td, cursor: "pointer" }}
+                                onClick={() => handleRowClick(item)}
+                            >
+                              {formatQuantity(item.quantity)}
+                            </td>
+                            <td
+                                style={{ ...styles.td, cursor: "pointer" }}
+                                onClick={() => handleRowClick(item)}
+                            >
+                              {formatMoney(item.price)}
+                            </td>
+                            <td
+                                style={{ ...styles.td, cursor: "pointer" }}
+                                onClick={() => handleRowClick(item)}
+                            >
+                              {formatMoney(item.fee)}
+                            </td>
+                            <td
+                                style={{ ...styles.td, cursor: "pointer" }}
+                                onClick={() => handleRowClick(item)}
+                            >
+                              {item.accountName || "-"}
+                            </td>
+                            <td style={styles.tdActions}>
+                              <button
+                                  type="button"
+                                  style={styles.rowDangerBtn}
+                                  onClick={() => handleDelete(item)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
 
-                      {isExpanded && (
-                        <tr key={`detail-${item.id}`}>
-                          <td colSpan={8} style={styles.detailCell}>
-                            <div style={styles.detailPanel}>
-                              <div style={styles.detailHeader}>
-                                <div>
-                                  <div style={styles.detailTitle}>
-                                    {item.symbol || "-"} · {item.transactionType || "-"}
-                                  </div>
-                                  <div style={styles.detailSubtitle}>
-                                    Click the row again to collapse.
-                                  </div>
-                                </div>
+                          {isExpanded && (
+                              <tr key={`detail-${item.id}`}>
+                                <td colSpan={8} style={styles.detailCell}>
+                                  <div style={styles.detailPanel}>
+                                    <div style={styles.detailHeader}>
+                                      <div>
+                                        <div style={styles.detailTitle}>
+                                          {item.symbol || "-"} · {item.transactionType || "-"}
+                                        </div>
+                                        <div style={styles.detailSubtitle}>
+                                          Click the row again to collapse.
+                                        </div>
+                                      </div>
 
-                                <div style={styles.detailHeaderStats}>
+                                      <div style={styles.detailHeaderStats}>
                                   <span style={styles.detailStat}>
                                     Qty {formatQuantity(item.quantity)}
                                   </span>
-                                  <span style={styles.detailStat}>
+                                        <span style={styles.detailStat}>
                                     Price {formatMoney(item.price)}
                                   </span>
-                                  <span
-                                    style={{
-                                      ...styles.detailStat,
-                                      color: getTypeColor(item.transactionType),
-                                    }}
-                                  >
+                                        <span
+                                            style={{
+                                              ...styles.detailStat,
+                                              color: getTypeColor(item.transactionType),
+                                            }}
+                                        >
                                     {item.transactionType || "-"}
                                   </span>
-                                </div>
-                              </div>
+                                      </div>
+                                    </div>
 
-                              <div style={styles.detailGrid}>
-                                <div style={styles.detailItem}>
-                                  <span style={styles.detailKey}>Transaction ID</span>
-                                  <span style={styles.detailValue}>{item.id}</span>
-                                </div>
+                                    <div style={styles.detailGrid}>
+                                      <div style={styles.detailItem}>
+                                        <span style={styles.detailKey}>Transaction ID</span>
+                                        <span style={styles.detailValue}>{item.id}</span>
+                                      </div>
 
-                                <div style={styles.detailItem}>
-                                  <span style={styles.detailKey}>Symbol</span>
-                                  <span style={styles.detailValue}>
+                                      <div style={styles.detailItem}>
+                                        <span style={styles.detailKey}>Symbol</span>
+                                        <span style={styles.detailValue}>
                                     {item.symbol || "-"}
                                   </span>
-                                </div>
+                                      </div>
 
-                                <div style={styles.detailItem}>
-                                  <span style={styles.detailKey}>Type</span>
-                                  <span
-                                    style={{
-                                      ...styles.detailValue,
-                                      color: getTypeColor(item.transactionType),
-                                    }}
-                                  >
+                                      <div style={styles.detailItem}>
+                                        <span style={styles.detailKey}>Type</span>
+                                        <span
+                                            style={{
+                                              ...styles.detailValue,
+                                              color: getTypeColor(item.transactionType),
+                                            }}
+                                        >
                                     {item.transactionType || "-"}
                                   </span>
-                                </div>
+                                      </div>
 
-                                <div style={styles.detailItem}>
-                                  <span style={styles.detailKey}>Quantity</span>
-                                  <span style={styles.detailValue}>
+                                      <div style={styles.detailItem}>
+                                        <span style={styles.detailKey}>Quantity</span>
+                                        <span style={styles.detailValue}>
                                     {formatQuantity(item.quantity)}
                                   </span>
-                                </div>
+                                      </div>
 
-                                <div style={styles.detailItem}>
-                                  <span style={styles.detailKey}>Price</span>
-                                  <span style={styles.detailValue}>
+                                      <div style={styles.detailItem}>
+                                        <span style={styles.detailKey}>Price</span>
+                                        <span style={styles.detailValue}>
                                     {formatMoney(item.price)}
                                   </span>
-                                </div>
+                                      </div>
 
-                                <div style={styles.detailItem}>
-                                  <span style={styles.detailKey}>Fee</span>
-                                  <span style={styles.detailValue}>
+                                      <div style={styles.detailItem}>
+                                        <span style={styles.detailKey}>Fee</span>
+                                        <span style={styles.detailValue}>
                                     {formatMoney(item.fee)}
                                   </span>
-                                </div>
+                                      </div>
 
-                                <div style={styles.detailItem}>
-                                  <span style={styles.detailKey}>Account</span>
-                                  <span style={styles.detailValue}>
+                                      <div style={styles.detailItem}>
+                                        <span style={styles.detailKey}>Account</span>
+                                        <span style={styles.detailValue}>
                                     {item.accountName || "-"}
                                   </span>
-                                </div>
+                                      </div>
 
-                                <div style={styles.detailItem}>
-                                  <span style={styles.detailKey}>Transaction Date</span>
-                                  <span style={styles.detailValue}>
+                                      <div style={styles.detailItem}>
+                                        <span style={styles.detailKey}>Transaction Date</span>
+                                        <span style={styles.detailValue}>
                                     {formatDateTime(item.transactionDate)}
                                   </span>
-                                </div>
+                                      </div>
 
-                                <div style={styles.detailItemWide}>
-                                  <span style={styles.detailKey}>Notes</span>
-                                  <span style={styles.detailValue}>
+                                      <div style={styles.detailItemWide}>
+                                        <span style={styles.detailKey}>Notes</span>
+                                        <span style={styles.detailValue}>
                                     {item.notes || "-"}
                                   </span>
-                                </div>
+                                      </div>
 
-                                <div style={styles.detailItem}>
-                                  <span style={styles.detailKey}>Created At</span>
-                                  <span style={styles.detailValue}>
+                                      <div style={styles.detailItem}>
+                                        <span style={styles.detailKey}>Created At</span>
+                                        <span style={styles.detailValue}>
                                     {formatDateTime(item.createdAt)}
                                   </span>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  );
-                })}
-              </tbody>
-            </table>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                          )}
+                        </>
+                    );
+                  })}
+                  </tbody>
+                </table>
 
-            {!filteredTransactions.length && (
-              <div style={styles.empty}>No matching transactions</div>
-            )}
-          </div>
-        )}
-      </section>
-    </div>
+                {!filteredTransactions.length && (
+                    <div style={styles.empty}>No matching transactions</div>
+                )}
+              </div>
+          )}
+        </section>
+      </div>
   );
 }
 
@@ -629,6 +742,113 @@ const styles = {
     flexDirection: "column",
     gap: "18px",
     color: "#e2e8f0",
+  },
+
+  // 弹窗样式
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0, 0, 0, 0.6)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+
+  modal: {
+    background: "#1e293b",
+    border: "1px solid #334155",
+    width: "90%",
+    maxWidth: "500px",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+  },
+
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "20px",
+    borderBottom: "1px solid #334155",
+  },
+
+  modalTitle: {
+    margin: 0,
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#f8fafc",
+  },
+
+  modalCloseBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#94a3b8",
+    fontSize: "28px",
+    cursor: "pointer",
+    padding: "0",
+    lineHeight: 1,
+  },
+
+  modalContent: {
+    padding: "24px 20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
+  },
+
+  successSymbol: {
+    fontSize: "32px",
+    fontWeight: 700,
+    textAlign: "center",
+  },
+
+  priceComparisonGrid: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "16px",
+  },
+
+  priceItem: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    padding: "12px",
+    background: "#0f172a",
+    border: "1px solid #334155",
+  },
+
+  priceLabel: {
+    fontSize: "12px",
+    color: "#94a3b8",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+  },
+
+  priceValue: {
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#e2e8f0",
+  },
+
+  priceArrow: {
+    fontSize: "20px",
+    color: "#60a5fa",
+    fontWeight: 700,
+  },
+
+  modalConfirmBtn: {
+    background: "#3b82f6",
+    color: "#fff",
+    border: "1px solid #3b82f6",
+    padding: "12px 20px",
+    fontSize: "14px",
+    fontWeight: 700,
+    cursor: "pointer",
+    marginTop: "8px",
   },
 
   hero: {

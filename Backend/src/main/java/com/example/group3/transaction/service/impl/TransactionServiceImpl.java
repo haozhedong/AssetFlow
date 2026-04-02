@@ -2,6 +2,8 @@ package com.example.group3.transaction.service.impl;
 
 import com.example.group3.Asset.Entity.Asset;
 import com.example.group3.Asset.Mapper.AssetMapper;
+import com.example.group3.Holding.Entity.Holding;
+import com.example.group3.Holding.Mapper.HoldingMapper;
 import com.example.group3.Holding.Service.HoldingService;
 import com.example.group3.market.dto.PriceResponseDTO;
 import com.example.group3.market.provider.FinnhubMarketDataProvider;
@@ -27,8 +29,9 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final AssetMapper assetMapper;
     private final TransactionMapper transactionMapper;
-    private final TransactionDomain transactionDomain; // DDD 领域
+    private final TransactionDomain transactionDomain;
     private final HoldingService holdingService;
+    private final HoldingMapper holdingMapper;
     private final FinnhubMarketDataProvider marketDataProvider;
 
     @Override
@@ -77,6 +80,11 @@ public class TransactionServiceImpl implements TransactionService {
         t.setTransactionType("buy");
         t.setAssetId(asset.getId());
 
+        // 获取购买前的均价
+        Holding existingHolding = holdingMapper.findByAssetId(asset.getId());
+        java.math.BigDecimal previousAverageCost = existingHolding != null ?
+                existingHolding.getAverageCost() : java.math.BigDecimal.ZERO;
+
         // 添加实时价格
         PriceResponseDTO priceResponseDTO = marketDataProvider.fetchPrice(asset.getId());
         t.setPrice(priceResponseDTO.getPrice());
@@ -94,9 +102,17 @@ public class TransactionServiceImpl implements TransactionService {
 
         transactionMapper.insert(t);
 
+        // 获取购买后的均价
+        Holding updatedHolding = holdingMapper.findByAssetId(asset.getId());
+        java.math.BigDecimal currentAverageCost = updatedHolding != null ?
+                updatedHolding.getAverageCost() : java.math.BigDecimal.ZERO;
+
         TransactionVO vo = new TransactionVO();
         BeanUtils.copyProperties(t, vo);
         vo.setSymbol(dto.getSymbol());
+        vo.setPreviousAverageCost(previousAverageCost);
+        vo.setCurrentAverageCost(currentAverageCost);
+        vo.setRemainingQuantity(updatedHolding != null ? updatedHolding.getQuantity() : java.math.BigDecimal.ZERO);
         return vo;
     }
 
@@ -111,6 +127,11 @@ public class TransactionServiceImpl implements TransactionService {
         BeanUtils.copyProperties(dto, t);
         t.setTransactionType("sell");
         t.setAssetId(asset.getId());
+
+        // 获取卖出前的均价和数量
+        Holding existingHolding = holdingMapper.findByAssetId(asset.getId());
+        java.math.BigDecimal previousAverageCost = existingHolding != null ?
+                existingHolding.getAverageCost() : java.math.BigDecimal.ZERO;
 
         // 添加实时价格
         PriceResponseDTO priceResponseDTO = marketDataProvider.fetchPrice(asset.getId());
@@ -129,9 +150,20 @@ public class TransactionServiceImpl implements TransactionService {
 
         transactionMapper.insert(t);
 
+        // 获取卖出后的信息
+        Holding updatedHolding = holdingMapper.findByAssetId(asset.getId());
+        // 卖出时均价保持不变（只有数量变化）
+        java.math.BigDecimal currentAverageCost = updatedHolding != null ?
+                updatedHolding.getAverageCost() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal remainingQuantity = updatedHolding != null ?
+                updatedHolding.getQuantity() : java.math.BigDecimal.ZERO;
+
         TransactionVO vo = new TransactionVO();
         BeanUtils.copyProperties(t, vo);
         vo.setSymbol(dto.getSymbol());
+        vo.setPreviousAverageCost(previousAverageCost);
+        vo.setCurrentAverageCost(currentAverageCost);
+        vo.setRemainingQuantity(remainingQuantity);
         return vo;
     }
 
