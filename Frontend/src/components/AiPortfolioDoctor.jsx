@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle, Loader } from "lucide-react";
+import { AlertCircle, CheckCircle } from "lucide-react";
 import { getAiPortfolioSummary } from "../api/dashboardApi";
 
 const DIAGNOSTIC_MESSAGES = [
@@ -18,7 +18,6 @@ export default function AiPortfolioDoctor() {
     const [messageIndex, setMessageIndex] = useState(0);
     const [elapsedTime, setElapsedTime] = useState(0);
 
-    // Message rotation
     useEffect(() => {
         if (!loading) return;
 
@@ -29,7 +28,6 @@ export default function AiPortfolioDoctor() {
         return () => clearInterval(messageInterval);
     }, [loading]);
 
-    // Timer
     useEffect(() => {
         if (!loading) return;
 
@@ -40,7 +38,6 @@ export default function AiPortfolioDoctor() {
         return () => clearInterval(timerInterval);
     }, [loading]);
 
-    // Fetch data
     useEffect(() => {
         let isMounted = true;
 
@@ -74,60 +71,42 @@ export default function AiPortfolioDoctor() {
         return `${minutes}:${secs.toString().padStart(2, "0")}`;
     };
 
-    // Loading state
     if (loading) {
         return (
-            <section style={styles.wrapper}>
-                <div style={styles.header}>
-                    <h2 style={styles.title}>Portfolio Doctor</h2>
-                    <span style={styles.badge}>AI ANALYSIS</span>
-                </div>
-
-                <div style={styles.loadingBox}>
-                    <div style={styles.spinner}></div>
-                    <p style={styles.diagnosticMessage}>{DIAGNOSTIC_MESSAGES[messageIndex]}</p>
-                    <p style={styles.timerInfo}>Elapsed: {formatTime(elapsedTime)}</p>
-                    <p style={styles.estimatedTime}>Analysis typically takes 1-3 minutes</p>
-                </div>
-            </section>
+            <div style={styles.loadingBox}>
+                <div style={styles.spinner}></div>
+                <p style={styles.diagnosticMessage}>
+                    {DIAGNOSTIC_MESSAGES[messageIndex]}
+                </p>
+                <p style={styles.timerInfo}>Elapsed: {formatTime(elapsedTime)}</p>
+                <p style={styles.estimatedTime}>
+                    Analysis typically takes 1-3 minutes
+                </p>
+            </div>
         );
     }
 
-    // Error state
     if (error) {
         return (
-            <section style={styles.wrapper}>
-                <div style={styles.header}>
-                    <h2 style={styles.title}>Portfolio Doctor</h2>
-                    <span style={styles.badge}>AI ANALYSIS</span>
+            <div style={styles.errorBox}>
+                <AlertCircle size={20} style={styles.errorIcon} />
+                <div style={styles.errorContent}>
+                    <p style={styles.errorMessage}>{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        style={styles.retryButton}
+                    >
+                        Retry
+                    </button>
                 </div>
-
-                <div style={styles.errorBox}>
-                    <AlertCircle size={20} style={styles.errorIcon} />
-                    <div style={styles.errorContent}>
-                        <p style={styles.errorMessage}>{error}</p>
-                        <button
-                            onClick={() => window.location.reload()}
-                            style={styles.retryButton}
-                        >
-                            Retry
-                        </button>
-                    </div>
-                </div>
-            </section>
+            </div>
         );
     }
 
-    // Success state - Formatted content display
     return (
-        <section style={styles.wrapper}>
-            <div style={styles.header}>
-                <h2 style={styles.title}>Portfolio Doctor</h2>
-                <span style={styles.badge}>AI ANALYSIS</span>
-            </div>
-
+        <div style={styles.wrapper}>
             <div style={styles.contentBox}>
-                <div style={styles.markdownContent}>
+                <div className="custom-scrollbar" style={styles.markdownContent}>
                     {aiSummary && renderFormattedContent(aiSummary)}
                 </div>
             </div>
@@ -136,56 +115,106 @@ export default function AiPortfolioDoctor() {
                 <CheckCircle size={16} style={styles.successIcon} />
                 <span style={styles.footerText}>Analysis completed</span>
             </div>
-        </section>
+        </div>
     );
 }
 
-// Helper function to render formatted content
-function renderFormattedContent(content) {
-    return content.split("\n").map((line, idx) => {
-        const trimmed = line.trim();
+function stripMarkdownSymbols(text) {
+    return text
+        .replace(/\*\*/g, "")
+        .replace(/\*/g, "")
+        .replace(/^#{1,6}\s*/, "")
+        .trim();
+}
 
-        // Empty lines
+function renderFormattedContent(content) {
+    const lines = content.split("\n");
+    const elements = [];
+    let listBuffer = [];
+
+    const flushList = (keyPrefix) => {
+        if (listBuffer.length > 0) {
+            elements.push(
+                <ul key={`list-${keyPrefix}`} style={styles.ul}>
+                    {listBuffer.map((item, idx) => (
+                        <li key={`${keyPrefix}-${idx}`} style={styles.li}>
+                            {item}
+                        </li>
+                    ))}
+                </ul>
+            );
+            listBuffer = [];
+        }
+    };
+
+    lines.forEach((line, idx) => {
+        const trimmed = line.trim();
+        const cleaned = stripMarkdownSymbols(trimmed);
+
         if (trimmed === "") {
-            return <div key={idx} style={{ height: "8px" }} />;
+            flushList(idx);
+            elements.push(<div key={`space-${idx}`} style={styles.spacer} />);
+            return;
         }
 
-        // Headings
+        if (trimmed.startsWith("- ") || /^\d+\.\s/.test(trimmed)) {
+            const listText = trimmed
+                .replace(/^- /, "")
+                .replace(/^\d+\.\s/, "")
+                .trim();
+
+            listBuffer.push(stripMarkdownSymbols(listText));
+            return;
+        }
+
+        flushList(idx);
+
         if (trimmed.startsWith("### ")) {
-            return (
-                <h3 key={idx} style={styles.h3}>
-                    {trimmed.replace(/^### /, "")}
+            elements.push(
+                <h3 key={`h3-${idx}`} style={styles.h3}>
+                    {stripMarkdownSymbols(trimmed.replace(/^### /, ""))}
                 </h3>
             );
+            return;
         }
 
-        // Bold text
+        if (trimmed.startsWith("## ")) {
+            elements.push(
+                <h3 key={`h2-${idx}`} style={styles.h3}>
+                    {stripMarkdownSymbols(trimmed.replace(/^## /, ""))}
+                </h3>
+            );
+            return;
+        }
+
+        if (trimmed.startsWith("# ")) {
+            elements.push(
+                <h3 key={`h1-${idx}`} style={styles.h3}>
+                    {stripMarkdownSymbols(trimmed.replace(/^# /, ""))}
+                </h3>
+            );
+            return;
+        }
+
         if (trimmed.startsWith("**") && trimmed.endsWith("**")) {
-            return (
-                <p key={idx} style={styles.p}>
-                    <strong style={styles.strong}>
-                        {trimmed.replace(/\*\*/g, "")}
-                    </strong>
+            elements.push(
+                <p key={`strong-${idx}`} style={styles.p}>
+                    <strong style={styles.strong}>{cleaned}</strong>
                 </p>
             );
+            return;
         }
 
-        // List items
-        if (trimmed.startsWith("- ")) {
-            return (
-                <li key={idx} style={styles.li}>
-                    {trimmed.replace(/^- /, "")}
-                </li>
-            );
-        }
-
-        // Regular paragraphs
-        return (
-            <p key={idx} style={styles.p}>
-                {trimmed}
+        elements.push(
+            <p key={`p-${idx}`} style={styles.p}>
+                {cleaned}
             </p>
         );
     });
+
+    flushList("end");
+
+    return elements;
 }
 
 const styles = {
@@ -193,36 +222,6 @@ const styles = {
         background: "transparent",
         padding: "0",
         borderRadius: "8px",
-    },
-
-    header: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "16px",
-        gap: "12px",
-        flexWrap: "wrap",
-    },
-
-    title: {
-        margin: 0,
-        color: "#f0f4f8",
-        fontSize: "18px",
-        fontWeight: 700,
-        letterSpacing: "0.02em",
-    },
-
-    badge: {
-        display: "inline-block",
-        padding: "6px 12px",
-        backgroundColor: "rgba(59, 130, 246, 0.12)",
-        color: "#60a5fa",
-        fontSize: "10px",
-        fontWeight: 700,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
-        borderRadius: "4px",
-        border: "1px solid rgba(59, 130, 246, 0.25)",
     },
 
     loadingBox: {
@@ -236,7 +235,8 @@ const styles = {
         borderRadius: "8px",
         borderTop: "1px solid rgba(148, 163, 184, 0.15)",
         borderBottom: "1px solid rgba(148, 163, 184, 0.15)",
-        background: "linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(99, 102, 241, 0.04) 100%)",
+        background:
+            "linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(99, 102, 241, 0.04) 100%)",
     },
 
     spinner: {
@@ -344,6 +344,8 @@ const styles = {
         fontSize: "14px",
         color: "#cbd5e1",
         lineHeight: 1.7,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
     },
 
     strong: {
@@ -351,13 +353,21 @@ const styles = {
         fontWeight: 700,
     },
 
+    ul: {
+        margin: "8px 0 12px 0",
+        paddingLeft: "24px",
+    },
+
     li: {
         margin: "8px 0",
-        marginLeft: "24px",
         fontSize: "14px",
         color: "#cbd5e1",
         lineHeight: 1.7,
         listStyleType: "disc",
+    },
+
+    spacer: {
+        height: "8px",
     },
 
     footer: {
@@ -378,24 +388,24 @@ const styles = {
     },
 };
 
-// Add CSS animations
-if (typeof document !== "undefined") {
+if (typeof document !== "undefined" && !document.getElementById("ai-portfolio-doctor-animations")) {
     const style = document.createElement("style");
+    style.id = "ai-portfolio-doctor-animations";
     style.textContent = `
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    `;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  `;
     document.head.appendChild(style);
 }

@@ -123,48 +123,25 @@ const styles = {
     padding: "6px 12px",
     backgroundColor: "rgba(59, 130, 246, 0.12)",
     color: "#60a5fa",
-    fontSize: "10px",
+    fontSize: "11px",
     fontWeight: 700,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
-    borderRadius: "4px",
-    border: "1px solid rgba(59, 130, 246, 0.25)",
+    borderRadius: "6px",
     whiteSpace: "nowrap",
   },
 
   cardContent: {
-    paddingTop: "8px",
+    backgroundColor: "#1e293b",
+    borderRadius: "8px",
+    overflow: "hidden",
+    border: "1px solid rgba(148, 163, 184, 0.15)",
   },
 
   chatCard: {
-    backgroundColor: "transparent",
-    borderRadius: "12px",
+    backgroundColor: "#1e293b",
+    borderRadius: "8px",
     overflow: "hidden",
-  },
-
-  // Responsive design
-  "@media (max-width: 1200px)": {
-    twoColumnLayout: {
-      gridTemplateColumns: "1fr",
-    },
-  },
-
-  "@media (max-width: 768px)": {
-    section: {
-      padding: "24px 16px",
-    },
-
-    title: {
-      fontSize: "28px",
-    },
-
-    subtitle: {
-      fontSize: "14px",
-    },
-
-    twoColumnLayout: {
-      gridTemplateColumns: "1fr",
-      gap: "20px",
-    },
+    border: "1px solid rgba(148, 163, 184, 0.15)",
   },
 };

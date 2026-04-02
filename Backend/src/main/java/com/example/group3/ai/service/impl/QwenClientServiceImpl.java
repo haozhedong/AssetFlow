@@ -1,16 +1,24 @@
 package com.example.group3.ai.service.impl;
 
+import com.example.group3.ai.dto.ChatMessage;
 import com.example.group3.ai.service.AiClientService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class QwenClientServiceImpl implements AiClientService {
 
     private final RestTemplate restTemplate;
@@ -23,10 +31,6 @@ public class QwenClientServiceImpl implements AiClientService {
 
     @Value("${dashscope.model}")
     private String model;
-
-    public QwenClientServiceImpl(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
 
     @Override
     public String generateText(String prompt) {
@@ -60,27 +64,77 @@ public class QwenClientServiceImpl implements AiClientService {
         return extractText(response.getBody());
     }
 
+    @Override
+    public String chatWithHistory(String userMessage, List<ChatMessage> history) {
+        String url = baseUrl + "/chat/completions";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        // 构建系统消息
+        Map<String, Object> systemMessage = new HashMap<>();
+        systemMessage.put("role", "system");
+        systemMessage.put("content", "You are a portfolio analysis assistant for an asset management platform. " +
+                "Provide concise, clear answers in English. Keep responses brief and actionable unless the user explicitly asks for detailed analysis. " +
+                "Focus on practical insights and data-driven recommendations.");
+
+        // 转换历史消息
+        List<Map<String, Object>> messages = history.stream()
+                .map(msg -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("role", msg.getRole());
+                    m.put("content", msg.getContent());
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        // 添加系统消息到开头
+        messages.add(0, systemMessage);
+
+        // 添加当前用户消息
+        Map<String, Object> currentMessage = new HashMap<>();
+        currentMessage.put("role", "user");
+        currentMessage.put("content", userMessage);
+        messages.add(currentMessage);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", model);
+        body.put("messages", messages);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                request,
+                Map.class
+        );
+
+        return extractText(response.getBody());
+    }
+
     private String extractText(Map responseBody) {
         if (responseBody == null) {
-            return "No response from model.";
+            return "";
         }
 
         Object choicesObj = responseBody.get("choices");
-        if (!(choicesObj instanceof List<?> choices) || choices.isEmpty()) {
-            return "No choices returned.";
+        if (choicesObj instanceof List) {
+            List<?> choices = (List<?>) choicesObj;
+            if (!choices.isEmpty() && choices.get(0) instanceof Map) {
+                Map<?, ?> firstChoice = (Map<?, ?>) choices.get(0);
+                Object messageObj = firstChoice.get("message");
+                if (messageObj instanceof Map) {
+                    Map<?, ?> message = (Map<?, ?>) messageObj;
+                    Object content = message.get("content");
+                    if (content instanceof String) {
+                        return (String) content;
+                    }
+                }
+            }
         }
 
-        Object firstChoice = choices.get(0);
-        if (!(firstChoice instanceof Map<?, ?> choiceMap)) {
-            return "Unexpected response format.";
-        }
-
-        Object messageObj = choiceMap.get("message");
-        if (!(messageObj instanceof Map<?, ?> messageMap)) {
-            return "No message returned.";
-        }
-
-        Object content = messageMap.get("content");
-        return content == null ? "No content returned." : content.toString();
+        return "";
     }
 }
