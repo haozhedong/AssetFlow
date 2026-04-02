@@ -16,4 +16,9 @@ public class TransactionVO {
     private String accountName;
     private String notes;
     private LocalDateTime createdAt;
+
+    // 用于展示交易前后的均价
+    private BigDecimal previousAverageCost;
+    private BigDecimal currentAverageCost;
+    private BigDecimal remainingQuantity;  // 卖出后剩余数量
 }
