@@ -20,28 +20,31 @@ const emptyForm = {
   notes: "",
 };
 
+const emptyNewAsset = {
+  symbol: "",
+  name: "",
+  assetType: "STOCK",
+  market: "",
+};
+
 export default function Holdings() {
   const [holdings, setHoldings] = useState([]);
   const [availableAssets, setAvailableAssets] = useState([]);
   const [selectedHolding, setSelectedHolding] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [creatingAsset, setCreatingAsset] = useState(false);
   const [error, setError] = useState("");
 
   const [showModal, setShowModal] = useState(false);
   const [showCreateAssetForm, setShowCreateAssetForm] = useState(false);
-  const [creatingAsset, setCreatingAsset] = useState(false);
+
   const [formMode, setFormMode] = useState(""); // "", "add", "edit"
   const [formData, setFormData] = useState(emptyForm);
   const [assetSearch, setAssetSearch] = useState("");
-  
-  const [newAssetData, setNewAssetData] = useState({
-    symbol: "",
-    name: "",
-    assetType: "STOCK",
-    market: "",
-  });
+  const [newAssetData, setNewAssetData] = useState(emptyNewAsset);
 
   const [filters, setFilters] = useState({
     assetType: "",
@@ -51,14 +54,14 @@ export default function Holdings() {
   });
 
   useEffect(() => {
-    fetchHoldings();
     fetchAssets();
+    fetchHoldings();
   }, []);
 
   async function fetchAssets() {
     try {
       const data = await getAllAssets();
-      setAvailableAssets(data);
+      setAvailableAssets(data || []);
     } catch (err) {
       console.error("Failed to load assets:", err);
     }
@@ -69,13 +72,7 @@ export default function Holdings() {
       setLoading(true);
       setError("");
       const data = await getAllHoldings();
-      setHoldings(data);
-
-      if (data.length > 0) {
-        await handleSelectHolding(data[0].id);
-      } else {
-        setSelectedHolding(null);
-      }
+      setHoldings(data || []);
     } catch (err) {
       console.error(err);
       setError("Failed to load holdings");
@@ -85,6 +82,13 @@ export default function Holdings() {
   }
 
   async function handleSelectHolding(id) {
+    if (!id) return;
+
+    if (selectedHolding?.id === id) {
+      setSelectedHolding(null);
+      return;
+    }
+
     try {
       setDetailLoading(true);
       setError("");
@@ -106,8 +110,8 @@ export default function Holdings() {
     setShowModal(true);
   }
 
-  function openEditForm() {
-    if (!selectedHolding) {
+  function openEditForm(holding) {
+    if (!holding) {
       setError("Please select one holding first");
       return;
     }
@@ -115,16 +119,21 @@ export default function Holdings() {
     setError("");
     setFormMode("edit");
     setFormData({
-      assetId: selectedHolding.assetId ?? "",
-      assetSymbol: selectedHolding.assetSymbol ?? "",
-      quantity: selectedHolding.quantity ?? "",
-      averageCost: selectedHolding.averageCost ?? "",
-      costCurrency: selectedHolding.costCurrency ?? "USD",
-      purchaseDate: selectedHolding.purchaseDate ?? "",
-      accountName: selectedHolding.accountName ?? "",
-      notes: selectedHolding.notes ?? "",
+      assetId: holding.assetId ?? "",
+      assetSymbol: holding.assetSymbol ?? "",
+      quantity: holding.quantity ?? "",
+      averageCost: holding.averageCost ?? "",
+      costCurrency: holding.costCurrency ?? "USD",
+      purchaseDate: holding.purchaseDate ?? "",
+      accountName: holding.accountName ?? "",
+      notes: holding.notes ?? "",
     });
-    setAssetSearch(`${selectedHolding.assetSymbol} - ${selectedHolding.assetName}`);
+    setAssetSearch(
+      holding.assetSymbol
+        ? `${holding.assetSymbol} - ${holding.assetName || ""}`
+        : ""
+    );
+    setSelectedHolding(holding);
     setShowModal(true);
   }
 
@@ -135,65 +144,62 @@ export default function Holdings() {
     setAssetSearch("");
   }
 
-  function closeForm() {
-    closeFormModal();
-  }
-
   async function handleCreateAsset() {
     try {
-      if (!newAssetData.symbol.trim()) {
-        setError("❌ Symbol is required");
+      const normalizedSymbol = newAssetData.symbol.trim().toUpperCase();
+
+      if (!normalizedSymbol) {
+        setError("Symbol is required");
         return;
       }
+
       if (!newAssetData.name.trim()) {
-        setError("❌ Name is required");
+        setError("Name is required");
+        return;
+      }
+
+      const existingAsset = availableAssets.find(
+          (asset) => String(asset.symbol || "").trim().toUpperCase() === normalizedSymbol
+      );
+
+      if (existingAsset) {
+        setError(`Asset ${normalizedSymbol} already exists`);
+
+        setFormData((prev) => ({
+          ...prev,
+          assetId: existingAsset.id,
+          assetSymbol: existingAsset.symbol,
+        }));
+        setAssetSearch(`${existingAsset.symbol} - ${existingAsset.name || ""}`);
+        setShowCreateAssetForm(false);
         return;
       }
 
       setCreatingAsset(true);
       setError("");
 
-      // 创建资产
       const newAsset = await createAsset({
-        symbol: newAssetData.symbol.toUpperCase(),
-        name: newAssetData.name,
+        symbol: normalizedSymbol,
+        name: newAssetData.name.trim(),
         assetType: newAssetData.assetType || "STOCK",
         market: newAssetData.market || "",
         isActive: true,
       });
 
-      // 刷新资产列表（失败了也继续）
-      try {
-        await fetchAssets();
-      } catch (fetchErr) {
-        console.warn("Asset list refresh failed:", fetchErr);
-      }
+      await fetchAssets();
 
-      // 自动选择新创建的资产
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         assetId: newAsset.id,
         assetSymbol: newAsset.symbol,
-      });
+      }));
       setAssetSearch(`${newAsset.symbol} - ${newAsset.name}`);
 
-      // 关闭创建表单
       setShowCreateAssetForm(false);
-      setNewAssetData({
-        symbol: "",
-        name: "",
-        assetType: "STOCK",
-        market: "",
-      });
+      setNewAssetData(emptyNewAsset);
     } catch (err) {
       console.error("Asset creation error:", err);
-      let errorMsg = "Failed to create asset";
-      if (err.message && err.message.includes("Failed to fetch")) {
-        errorMsg = "Network error - please check your connection";
-      } else if (err.message) {
-        errorMsg = err.message;
-      }
-      setError(`❌ ${errorMsg}`);
+      setError(err.message || "Failed to create asset");
     } finally {
       setCreatingAsset(false);
     }
@@ -208,7 +214,7 @@ export default function Holdings() {
   }
 
   async function handleSubmitForm(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
 
     try {
       setSubmitting(true);
@@ -225,26 +231,33 @@ export default function Holdings() {
       };
 
       if (!payload.assetId || payload.assetId <= 0) {
-        throw new Error("❌ Asset: Please select from the dropdown list");
+        throw new Error("Please select an asset from the list");
       }
 
       if (!payload.quantity || payload.quantity <= 0) {
-        throw new Error("❌ Quantity: Must be greater than 0");
+        throw new Error("Quantity must be greater than 0");
       }
 
       if (!payload.averageCost || payload.averageCost <= 0) {
-        throw new Error("❌ Average Cost: Must be greater than 0");
+        throw new Error("Average cost must be greater than 0");
       }
 
       let savedHolding;
 
       if (formMode === "add") {
+        console.log("Calling createHolding for add mode");
         savedHolding = await createHolding(payload);
+        // Append the new holding to the list locally
+        setHoldings(prev => [...prev, savedHolding]);
       } else if (formMode === "edit" && selectedHolding?.id) {
+        console.log("Calling updateHolding for edit mode");
         savedHolding = await updateHolding(selectedHolding.id, payload);
+        // Update the existing holding in the list locally
+        setHoldings(prev => prev.map(h => h.id === selectedHolding.id ? savedHolding : h));
       }
 
-      await fetchHoldings();
+      // No need to fetch all holdings after local update
+      // await fetchHoldings();
 
       if (savedHolding?.id) {
         await handleSelectHolding(savedHolding.id);
@@ -259,21 +272,24 @@ export default function Holdings() {
     }
   }
 
-  async function handleDelete() {
-    if (!selectedHolding?.id) {
+  async function handleDelete(holding) {
+    if (!holding?.id) {
       setError("Please select one holding first");
       return;
     }
 
-    const confirmed = window.confirm(`Delete holding #${selectedHolding.id}?`);
+    const confirmed = window.confirm(
+      `Delete ${holding.assetSymbol || "this holding"}?`
+    );
     if (!confirmed) return;
 
     try {
       setError("");
-      await deleteHolding(selectedHolding.id);
+      await deleteHolding(holding.id);
+      if (selectedHolding?.id === holding.id) {
+        setSelectedHolding(null);
+      }
       await fetchHoldings();
-      setSelectedHolding(null);
-      closeForm();
     } catch (err) {
       console.error(err);
       setError("Failed to delete holding");
@@ -345,736 +361,665 @@ export default function Holdings() {
     return Number(value ?? 0).toFixed(digits);
   }
 
+  function formatQuantity(value) {
+    return Math.round(Number(value ?? 0)).toLocaleString();
+  }
+
+  function formatMoney(value, digits = 2) {
+    return `$${Number(value ?? 0).toLocaleString(undefined, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    })}`;
+  }
+
   function formatDate(value) {
     return value || "-";
   }
 
   return (
     <div style={styles.page}>
-      <div style={styles.header}>Holdings</div>
+      <section style={styles.hero}>
+        <div>
+          <div style={styles.overline}>HOLDINGS</div>
+          <h1 style={styles.pageTitle}>Portfolio Holdings</h1>
+          <p style={styles.pageSubtitle}>
+            Monitor, edit, export, and inspect each position in a terminal-style
+            layout.
+          </p>
+        </div>
+
+        <div style={styles.heroActions}>
+          <button style={styles.primaryBtn} type="button" onClick={openAddForm}>
+            + Add Holding
+          </button>
+          <button
+            style={styles.secondaryBtnCompact}
+            type="button"
+            onClick={handleExportCsv}
+          >
+            Export CSV
+          </button>
+        </div>
+      </section>
 
       {error ? <div style={styles.error}>{error}</div> : null}
 
-      <div style={styles.layout}>
-        <section style={styles.filterPanel}>
-          <h3 style={styles.sectionTitle}>Filters</h3>
+      <section style={styles.filtersSection}>
+        <div style={styles.sectionBar}>
+          <h2 style={styles.sectionTitle}>Filters</h2>
+        </div>
 
-          <label style={styles.label}>asset_type</label>
-          <input
-            style={styles.input}
-            value={filters.assetType}
-            onChange={(e) =>
-              setFilters({ ...filters, assetType: e.target.value })
-            }
-            placeholder="e.g., STOCK"
-          />
+        <div style={styles.filtersGrid}>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Asset Type</label>
+            <input
+              style={styles.input}
+              value={filters.assetType}
+              onChange={(e) =>
+                setFilters({ ...filters, assetType: e.target.value })
+              }
+              placeholder="e.g. STOCK"
+            />
+          </div>
 
-          <label style={styles.label}>market</label>
-          <input
-            style={styles.input}
-            value={filters.market}
-            onChange={(e) =>
-              setFilters({ ...filters, market: e.target.value })
-            }
-            placeholder="e.g., US"
-          />
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Market</label>
+            <input
+              style={styles.input}
+              value={filters.market}
+              onChange={(e) =>
+                setFilters({ ...filters, market: e.target.value })
+              }
+              placeholder="e.g. US"
+            />
+          </div>
 
-          <label style={styles.label}>account_name</label>
-          <input
-            style={styles.input}
-            value={filters.accountName}
-            onChange={(e) =>
-              setFilters({ ...filters, accountName: e.target.value })
-            }
-            placeholder="e.g., Main Account"
-          />
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Account</label>
+            <input
+              style={styles.input}
+              value={filters.accountName}
+              onChange={(e) =>
+                setFilters({ ...filters, accountName: e.target.value })
+              }
+              placeholder="e.g. Main Account"
+            />
+          </div>
 
-          <label style={styles.label}>keyword</label>
-          <input
-            style={styles.input}
-            value={filters.keyword}
-            onChange={(e) =>
-              setFilters({ ...filters, keyword: e.target.value })
-            }
-            placeholder="Search all fields"
-          />
-        </section>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Keyword</label>
+            <input
+              style={styles.input}
+              value={filters.keyword}
+              onChange={(e) =>
+                setFilters({ ...filters, keyword: e.target.value })
+              }
+              placeholder="Search symbol, name, notes..."
+            />
+          </div>
+        </div>
+      </section>
 
-        <div style={styles.mainColumn}>
-          <section style={styles.tableCard}>
-            <h3 style={styles.sectionTitle}>Holding List</h3>
+      <section style={styles.tableSection}>
+        <div style={styles.sectionBar}>
+          <h2 style={styles.sectionTitle}>Holding List</h2>
+          <span style={styles.sectionMeta}>
+            {filteredHoldings.length} position
+            {filteredHoldings.length === 1 ? "" : "s"}
+          </span>
+        </div>
 
-            {loading ? (
-              <div style={styles.empty}>Loading holdings...</div>
-            ) : (
-              <div style={styles.tableWrapper}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Symbol</th>
-                      <th style={styles.th}>Asset Name</th>
-                      <th style={styles.th}>Type</th>
-                      <th style={styles.th}>Market</th>
-                      <th style={styles.th}>Qty</th>
-                      <th style={styles.th}>Avg Cost</th>
-                      <th style={styles.th}>Latest Price</th>
-                      <th style={styles.th}>Market Value</th>
-                      <th style={styles.th}>Unrealized PnL</th>
-                    </tr>
-                  </thead>
+        {loading ? (
+          <div style={styles.empty}>Loading holdings...</div>
+        ) : (
+          <div style={styles.tableWrapper}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Symbol</th>
+                  <th style={styles.th}>Asset Name</th>
+                  <th style={styles.th}>Type</th>
+                  <th style={styles.th}>Market</th>
+                  <th style={styles.th}>Qty</th>
+                  <th style={styles.th}>Avg Cost</th>
+                  <th style={styles.th}>Latest Price</th>
+                  <th style={styles.th}>Market Value</th>
+                  <th style={styles.th}>PnL</th>
+                  <th style={styles.thActions}>Actions</th>
+                </tr>
+              </thead>
 
-                  <tbody>
-                    {filteredHoldings.map((item) => {
-                      const isSelected = selectedHolding?.id === item.id;
-                      const pnlColor =
-                        Number(item.unrealizedPnl ?? 0) >= 0
-                          ? "#22c55e"
-                          : "#ef4444";
+              <tbody>
+                {filteredHoldings.map((item) => {
+                  const isSelected = selectedHolding?.id === item.id;
+                  const pnlColor =
+                    Number(item.unrealizedPnl ?? 0) >= 0 ? "#22c55e" : "#ef4444";
 
-                      return (
-                        <tr
-                          key={item.id}
+                  return (
+                    <>
+                      <tr
+                        key={`row-${item.id}`}
+                        style={{
+                          ...styles.tableRow,
+                          background: isSelected
+                            ? "rgba(59,130,246,0.08)"
+                            : "transparent",
+                        }}
+                      >
+                        <td
+                          style={{ ...styles.tdSymbol, cursor: "pointer" }}
+                          onClick={() => handleSelectHolding(item.id)}
+                        >
+                          {item.assetSymbol || "-"}
+                        </td>
+                        <td
+                          style={{ ...styles.td, cursor: "pointer" }}
+                          onClick={() => handleSelectHolding(item.id)}
+                        >
+                          {item.assetName || "-"}
+                        </td>
+                        <td
+                          style={{ ...styles.td, cursor: "pointer" }}
+                          onClick={() => handleSelectHolding(item.id)}
+                        >
+                          {item.assetType || "-"}
+                        </td>
+                        <td
+                          style={{ ...styles.td, cursor: "pointer" }}
+                          onClick={() => handleSelectHolding(item.id)}
+                        >
+                          {item.market || "-"}
+                        </td>
+                        <td
+                          style={{ ...styles.td, cursor: "pointer" }}
+                          onClick={() => handleSelectHolding(item.id)}
+                        >
+                          {formatQuantity(item.quantity)}
+                        </td>
+                        <td
+                          style={{ ...styles.td, cursor: "pointer" }}
+                          onClick={() => handleSelectHolding(item.id)}
+                        >
+                          {formatMoney(item.averageCost)}
+                        </td>
+                        <td
+                          style={{ ...styles.td, cursor: "pointer" }}
+                          onClick={() => handleSelectHolding(item.id)}
+                        >
+                          {formatMoney(item.latestPrice)}
+                        </td>
+                        <td
+                          style={{ ...styles.td, cursor: "pointer" }}
+                          onClick={() => handleSelectHolding(item.id)}
+                        >
+                          {formatMoney(item.marketValue)}
+                        </td>
+                        <td
                           style={{
-                            background: isSelected
-                              ? "rgba(59,130,246,0.10)"
-                              : "transparent",
+                            ...styles.td,
+                            color: pnlColor,
+                            fontWeight: 700,
                             cursor: "pointer",
                           }}
                           onClick={() => handleSelectHolding(item.id)}
                         >
-                          <td style={{ ...styles.td, color: "#3b82f6", fontWeight: 600 }}>
-                            {item.assetSymbol || "-"}
-                          </td>
-                          <td style={styles.td}>{item.assetName || "-"}</td>
-                          <td style={styles.td}>{item.assetType || "-"}</td>
-                          <td style={styles.td}>{item.market || "-"}</td>
-                          <td style={styles.td}>{formatNumber(item.quantity, 4)}</td>
-                          <td style={styles.td}>
-                            ${formatNumber(item.averageCost, 4)}
-                          </td>
-                          <td style={styles.td}>
-                            ${formatNumber(item.latestPrice, 4)}
-                          </td>
-                          <td style={styles.td}>
-                            ${formatNumber(item.marketValue, 2)}
-                          </td>
-                          <td style={{ ...styles.td, color: pnlColor, fontWeight: 600 }}>
-                            ${formatNumber(item.unrealizedPnl, 2)}
+                          {formatMoney(item.unrealizedPnl)}
+                        </td>
+                        <td style={styles.tdActions}>
+                          <button
+                            type="button"
+                            style={styles.rowGhostBtn}
+                            onClick={() => openEditForm(item)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            style={styles.rowDangerBtn}
+                            onClick={() => handleDelete(item)}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+
+                      {isSelected && (
+                        <tr key={`detail-${item.id}`}>
+                          <td colSpan={10} style={styles.detailCell}>
+                            {detailLoading ? (
+                              <div style={styles.detailLoading}>
+                                Loading details...
+                              </div>
+                            ) : (
+                              <div style={styles.detailPanel}>
+                                <div style={styles.detailHeader}>
+                                  <div>
+                                    <div style={styles.detailTitle}>
+                                      {selectedHolding?.assetSymbol || "-"} ·{" "}
+                                      {selectedHolding?.assetName || "-"}
+                                    </div>
+                                    <div style={styles.detailSubtitle}>
+                                      Click the same row again to collapse.
+                                    </div>
+                                  </div>
+
+                                  <div style={styles.detailHeaderStats}>
+                                    <span style={styles.detailStat}>
+                                      MV {formatMoney(selectedHolding?.marketValue)}
+                                    </span>
+                                    <span
+                                      style={{
+                                        ...styles.detailStat,
+                                        color:
+                                          Number(
+                                            selectedHolding?.unrealizedPnl ?? 0
+                                          ) >= 0
+                                            ? "#22c55e"
+                                            : "#ef4444",
+                                      }}
+                                    >
+                                      PnL {formatMoney(selectedHolding?.unrealizedPnl)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div style={styles.detailGrid}>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Holding ID</span>
+                                    <span style={styles.detailValue}>
+                                      {selectedHolding?.id ?? "-"}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Asset ID</span>
+                                    <span style={styles.detailValue}>
+                                      {selectedHolding?.assetId ?? "-"}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Quantity</span>
+                                    <span style={styles.detailValue}>
+                                      {formatQuantity(selectedHolding?.quantity)}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Average Cost</span>
+                                    <span style={styles.detailValue}>
+                                      {formatMoney(selectedHolding?.averageCost)}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Latest Price</span>
+                                    <span style={styles.detailValue}>
+                                      {formatMoney(selectedHolding?.latestPrice)}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Currency</span>
+                                    <span style={styles.detailValue}>
+                                      {selectedHolding?.costCurrency || "-"}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>PnL %</span>
+                                    <span
+                                      style={{
+                                        ...styles.detailValue,
+                                        color:
+                                          Number(
+                                            selectedHolding?.pnlPercent ?? 0
+                                          ) >= 0
+                                            ? "#22c55e"
+                                            : "#ef4444",
+                                      }}
+                                    >
+                                      {formatNumber(selectedHolding?.pnlPercent, 2)}%
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Purchase Date</span>
+                                    <span style={styles.detailValue}>
+                                      {formatDate(selectedHolding?.purchaseDate)}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Account</span>
+                                    <span style={styles.detailValue}>
+                                      {selectedHolding?.accountName || "-"}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Market</span>
+                                    <span style={styles.detailValue}>
+                                      {selectedHolding?.market || "-"}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItemWide}>
+                                    <span style={styles.detailKey}>Notes</span>
+                                    <span style={styles.detailValue}>
+                                      {selectedHolding?.notes || "-"}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Created At</span>
+                                    <span style={styles.detailValue}>
+                                      {formatDate(selectedHolding?.createdAt)}
+                                    </span>
+                                  </div>
+                                  <div style={styles.detailItem}>
+                                    <span style={styles.detailKey}>Updated At</span>
+                                    <span style={styles.detailValue}>
+                                      {formatDate(selectedHolding?.updatedAt)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      )}
+                    </>
+                  );
+                })}
+              </tbody>
+            </table>
 
-                {!filteredHoldings.length && (
-                  <div style={styles.empty}>No matching holdings</div>
-                )}
-              </div>
+            {!filteredHoldings.length && (
+              <div style={styles.empty}>No matching holdings</div>
             )}
-          </section>
-
-          <div style={styles.bottomGrid}>
-            <section style={styles.detailCard}>
-              <h3 style={styles.sectionTitle}>Holding Detail</h3>
-
-              {detailLoading ? (
-                <div style={styles.empty}>Loading detail...</div>
-              ) : selectedHolding ? (
-                <div style={styles.detailList}>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>id</span>
-                    <span>{selectedHolding.id}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>asset_id</span>
-                    <span>{selectedHolding.assetId}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>asset_symbol</span>
-                    <span style={{ color: "#3b82f6" }}>
-                      {selectedHolding.assetSymbol || "-"}
-                    </span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>asset_name</span>
-                    <span>{selectedHolding.assetName || "-"}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>asset_type</span>
-                    <span>{selectedHolding.assetType || "-"}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>market</span>
-                    <span>{selectedHolding.market || "-"}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>quantity</span>
-                    <span>{formatNumber(selectedHolding.quantity, 4)}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>average_cost</span>
-                    <span>${formatNumber(selectedHolding.averageCost, 4)}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>latest_price</span>
-                    <span>${formatNumber(selectedHolding.latestPrice, 4)}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>cost_currency</span>
-                    <span>{selectedHolding.costCurrency || "-"}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>market_value</span>
-                    <span>${formatNumber(selectedHolding.marketValue, 2)}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>unrealized_pnl</span>
-                    <span
-                      style={{
-                        color:
-                          Number(selectedHolding.unrealizedPnl ?? 0) >= 0
-                            ? "#22c55e"
-                            : "#ef4444",
-                        fontWeight: 600,
-                      }}
-                    >
-                      ${formatNumber(selectedHolding.unrealizedPnl, 2)}
-                    </span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>pnl_percent</span>
-                    <span
-                      style={{
-                        color:
-                          Number(selectedHolding.pnlPercent ?? 0) >= 0
-                            ? "#22c55e"
-                            : "#ef4444",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {formatNumber(selectedHolding.pnlPercent, 2)}%
-                    </span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>purchase_date</span>
-                    <span>{formatDate(selectedHolding.purchaseDate)}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>account_name</span>
-                    <span>{selectedHolding.accountName || "-"}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>notes</span>
-                    <span>{selectedHolding.notes || "-"}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>created_at</span>
-                    <span>{formatDate(selectedHolding.createdAt)}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailKey}>updated_at</span>
-                    <span>{formatDate(selectedHolding.updatedAt)}</span>
-                  </div>
-                </div>
-              ) : (
-                <div style={styles.empty}>Select one holding</div>
-              )}
-            </section>
-
-            <section style={styles.actionCard}>
-              <h3 style={styles.sectionTitle}>Actions</h3>
-
-              <button 
-                style={styles.primaryBtn} 
-                onClick={() => openAddForm()}
-                type="button"
-              >
-                Add Holding
-              </button>
-              <button 
-                style={styles.secondaryBtn} 
-                onClick={() => openEditForm()}
-                type="button"
-              >
-                Edit Holding
-              </button>
-              <button 
-                style={styles.secondaryBtn} 
-                onClick={() => handleDelete()}
-                type="button"
-              >
-                Delete Holding
-              </button>
-              <button 
-                style={styles.secondaryBtn} 
-                onClick={() => handleExportCsv()}
-                type="button"
-              >
-                Export CSV
-              </button>
-            </section>
           </div>
+        )}
+      </section>
 
-          <section style={styles.formCard}>
-            <h3 style={styles.sectionTitle}>
-              {formMode === "add"
-                ? "Add Holding"
-                : formMode === "edit"
-                ? "Edit Holding"
-                : "Holding Form"}
-            </h3>
+      {showModal && (
+        <div style={styles.modalOverlay} onClick={closeFormModal}>
+          <div
+            style={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>
+                {formMode === "add" ? "Add Holding" : "Edit Holding"}
+              </h3>
+              <button
+                type="button"
+                style={styles.modalCloseBtn}
+                onClick={closeFormModal}
+              >
+                ✕
+              </button>
+            </div>
 
-            {formMode ? (
-              <form onSubmit={handleSubmitForm} style={styles.form}>
-                <div style={styles.formGrid}>
-                  <div style={styles.fieldGroup}>
-                    <label style={styles.label}>asset_id</label>
+            <form style={styles.modalForm}>
+              <div style={styles.formGrid}>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Asset *</label>
+                  <div style={styles.assetSelector}>
                     <input
+                      type="text"
                       style={styles.input}
-                      name="assetId"
-                      value={formData.assetId}
-                      onChange={handleFormChange}
+                      placeholder="Search by symbol or name..."
+                      value={assetSearch}
+                      onChange={(e) => setAssetSearch(e.target.value)}
+                      autoComplete="off"
                     />
+
+                    {assetSearch &&
+                      !(
+                        formData.assetSymbol &&
+                        assetSearch.includes(formData.assetSymbol)
+                      ) && (
+                        <div style={styles.dropdown}>
+                          {filteredAssets.length > 0 ? (
+                            filteredAssets.map((asset) => (
+                              <div
+                                key={asset.id}
+                                style={styles.dropdownItem}
+                                onClick={() => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    assetId: asset.id,
+                                    assetSymbol: asset.symbol,
+                                  }));
+                                  setAssetSearch(`${asset.symbol} - ${asset.name}`);
+                                }}
+                              >
+                                <strong>{asset.symbol}</strong> - {asset.name}
+                              </div>
+                            ))
+                          ) : (
+                            <div>
+                              <div style={styles.dropdownEmpty}>
+                                No matching assets
+                              </div>
+                              <div
+                                style={styles.createAssetOption}
+                                onClick={() => {
+                                  setNewAssetData({
+                                    symbol: assetSearch.split(" ")[0].toUpperCase(),
+                                    name: assetSearch,
+                                    assetType: "STOCK",
+                                    market: "",
+                                  });
+                                  setShowCreateAssetForm(true);
+                                }}
+                              >
+                                + Create "{assetSearch}"
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                   </div>
 
-                  <div style={styles.fieldGroup}>
-                    <label style={styles.label}>quantity</label>
-                    <input
-                      style={styles.input}
-                      name="quantity"
-                      value={formData.quantity}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-
-                  <div style={styles.fieldGroup}>
-                    <label style={styles.label}>average_cost</label>
-                    <input
-                      style={styles.input}
-                      name="averageCost"
-                      value={formData.averageCost}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-
-                  <div style={styles.fieldGroup}>
-                    <label style={styles.label}>cost_currency</label>
-                    <input
-                      style={styles.input}
-                      name="costCurrency"
-                      value={formData.costCurrency}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-
-                  <div style={styles.fieldGroup}>
-                    <label style={styles.label}>purchase_date</label>
-                    <input
-                      style={styles.input}
-                      type="date"
-                      name="purchaseDate"
-                      value={formData.purchaseDate}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-
-                  <div style={styles.fieldGroup}>
-                    <label style={styles.label}>account_name</label>
-                    <input
-                      style={styles.input}
-                      name="accountName"
-                      value={formData.accountName}
-                      onChange={handleFormChange}
-                    />
-                  </div>
+                  {formData.assetId && formData.assetSymbol ? (
+                    <div style={styles.selectedAsset}>
+                      Selected: {formData.assetSymbol}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div style={styles.fieldGroup}>
-                  <label style={styles.label}>notes</label>
-                  <textarea
-                    style={styles.textarea}
-                    name="notes"
-                    value={formData.notes}
+                  <label style={styles.label}>Quantity *</label>
+                  <input
+                    style={styles.input}
+                    type="number"
+                    step="0.0001"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleFormChange}
+                    placeholder="e.g. 10"
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Average Cost *</label>
+                  <input
+                    style={styles.input}
+                    type="number"
+                    step="0.0001"
+                    name="averageCost"
+                    value={formData.averageCost}
+                    onChange={handleFormChange}
+                    placeholder="e.g. 150.50"
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Currency</label>
+                  <input
+                    style={styles.input}
+                    name="costCurrency"
+                    value={formData.costCurrency}
+                    onChange={handleFormChange}
+                    placeholder="USD"
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Purchase Date</label>
+                  <input
+                    style={styles.input}
+                    type="date"
+                    name="purchaseDate"
+                    value={formData.purchaseDate}
                     onChange={handleFormChange}
                   />
                 </div>
 
-                <div style={styles.formActions}>
-                  <button
-                    type="submit"
-                    style={styles.primaryBtn}
-                    disabled={submitting}
-                  >
-                    {submitting ? "Saving..." : "Save"}
-                  </button>
-
-                  <button
-                    type="button"
-                    style={styles.secondaryBtn}
-                    onClick={closeForm}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div style={styles.empty}>Click Add Holding or Edit Holding</div>
-            )}
-          </section>
-
-          {showModal && (
-            <div style={styles.modalOverlay} onClick={closeForm}>
-              <div
-                style={styles.modalContent}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div style={styles.modalHeader}>
-                  <h3 style={styles.modalTitle}>
-                    {formMode === "add"
-                      ? "Add Holding"
-                      : formMode === "edit"
-                      ? "Edit Holding"
-                      : "Holding Form"}
-                  </h3>
-                  <button
-                    type="button"
-                    style={styles.modalCloseBtn}
-                    onClick={closeForm}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {error && (
-                  <div
-                    style={{
-                      background: "#7f1d1d",
-                      border: "1px solid #dc2626",
-                      borderRadius: "10px",
-                      padding: "12px",
-                      color: "#fca5a5",
-                      fontSize: "13px",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    {error}
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmitForm} style={styles.modalForm}>
-                  <div style={styles.formGrid}>
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>
-                        Asset <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <div style={styles.assetSelector}>
-                        <input
-                          type="text"
-                          style={styles.input}
-                          placeholder="Search by Symbol or Name..."
-                          value={assetSearch}
-                          onChange={(e) => setAssetSearch(e.target.value)}
-                          autoComplete="off"
-                        />
-                        {assetSearch && 
-                         !(formData.assetSymbol && assetSearch.includes(formData.assetSymbol)) && (
-                          <div style={styles.dropdown}>
-                            {filteredAssets.length > 0 ? (
-                              filteredAssets.map((asset) => (
-                                <div
-                                  key={asset.id}
-                                  style={styles.dropdownItem}
-                                  onClick={() => {
-                                    setFormData({
-                                      ...formData,
-                                      assetId: asset.id,
-                                      assetSymbol: asset.symbol,
-                                    });
-                                    setAssetSearch(
-                                      `${asset.symbol} - ${asset.name}`
-                                    );
-                                  }}
-                                >
-                                  <strong>{asset.symbol}</strong> - {asset.name}
-                                </div>
-                              ))
-                            ) : (
-                              <div>
-                                <div
-                                  style={{
-                                    padding: "10px 12px",
-                                    color: "#94a3b8",
-                                    fontSize: "13px",
-                                    borderBottom: "1px solid #273449",
-                                  }}
-                                >
-                                  No matching assets
-                                </div>
-                                <div
-                                  style={styles.createAssetOption}
-                                  onClick={() => {
-                                    setNewAssetData({
-                                      symbol: assetSearch
-                                        .split(" ")[0]
-                                        .toUpperCase(),
-                                      name: assetSearch,
-                                      assetType: "STOCK",
-                                      market: "",
-                                    });
-                                    setShowCreateAssetForm(true);
-                                  }}
-                                >
-                                  ➕ Create "{assetSearch}"
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {formData.assetId && formData.assetSymbol && (
-                        <div style={styles.selectedAsset}>
-                          ✓ Selected: {formData.assetSymbol}
-                        </div>
-                      )}
-                      {!formData.assetId && assetSearch && (
-                        <div
-                          style={{
-                            marginTop: "8px",
-                            fontSize: "12px",
-                            color: "#ef4444",
-                          }}
-                        >
-                          Please select an asset from the list or create a new one
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>
-                        quantity <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <input
-                        style={styles.input}
-                        type="number"
-                        step="0.0001"
-                        name="quantity"
-                        value={formData.quantity}
-                        onChange={handleFormChange}
-                        placeholder="e.g., 10"
-                      />
-                    </div>
-
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>
-                        average_cost <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <input
-                        style={styles.input}
-                        type="number"
-                        step="0.0001"
-                        name="averageCost"
-                        value={formData.averageCost}
-                        onChange={handleFormChange}
-                        placeholder="e.g., 150.50"
-                      />
-                    </div>
-
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>cost_currency</label>
-                      <input
-                        style={styles.input}
-                        name="costCurrency"
-                        value={formData.costCurrency}
-                        onChange={handleFormChange}
-                        placeholder="USD"
-                      />
-                    </div>
-
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>purchase_date</label>
-                      <input
-                        style={styles.input}
-                        type="date"
-                        name="purchaseDate"
-                        value={formData.purchaseDate}
-                        onChange={handleFormChange}
-                      />
-                    </div>
-
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>account_name</label>
-                      <input
-                        style={styles.input}
-                        name="accountName"
-                        value={formData.accountName}
-                        onChange={handleFormChange}
-                        placeholder="Main Account"
-                      />
-                    </div>
-                  </div>
-
-                  <div style={styles.fieldGroup}>
-                    <label style={styles.label}>notes</label>
-                    <textarea
-                      style={styles.textarea}
-                      name="notes"
-                      value={formData.notes}
-                      onChange={handleFormChange}
-                      placeholder="Add any notes..."
-                    />
-                  </div>
-
-                  <div style={styles.modalActions}>
-                    <button
-                      type="submit"
-                      style={styles.primaryBtn}
-                      disabled={submitting}
-                    >
-                      {submitting ? "Saving..." : "Save"}
-                    </button>
-                    <button
-                      type="button"
-                      style={styles.secondaryBtn}
-                      onClick={closeForm}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {showCreateAssetForm && (
-            <div style={styles.modalOverlay} onClick={() => setShowCreateAssetForm(false)}>
-              <div
-                style={styles.modalContent}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div style={styles.modalHeader}>
-                  <h3 style={styles.modalTitle}>Create New Asset</h3>
-                  <button
-                    type="button"
-                    style={styles.modalCloseBtn}
-                    onClick={() => setShowCreateAssetForm(false)}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {error && (
-                  <div
-                    style={{
-                      background: "#7f1d1d",
-                      border: "1px solid #dc2626",
-                      borderRadius: "10px",
-                      padding: "12px",
-                      color: "#fca5a5",
-                      fontSize: "13px",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    {error}
-                  </div>
-                )}
-
-                <div style={styles.modalForm}>
-                  <div style={styles.formGrid}>
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>
-                        Symbol <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <input
-                        style={styles.input}
-                        type="text"
-                        value={newAssetData.symbol}
-                        onChange={(e) =>
-                          setNewAssetData({
-                            ...newAssetData,
-                            symbol: e.target.value.toUpperCase(),
-                          })
-                        }
-                        placeholder="e.g., AAPL"
-                      />
-                    </div>
-
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>
-                        Name <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <input
-                        style={styles.input}
-                        type="text"
-                        value={newAssetData.name}
-                        onChange={(e) =>
-                          setNewAssetData({
-                            ...newAssetData,
-                            name: e.target.value,
-                          })
-                        }
-                        placeholder="e.g., Apple Inc."
-                      />
-                    </div>
-
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>
-                        Asset Type <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <input
-                        style={styles.input}
-                        type="text"
-                        value={newAssetData.assetType}
-                        onChange={(e) =>
-                          setNewAssetData({
-                            ...newAssetData,
-                            assetType: e.target.value,
-                          })
-                        }
-                        placeholder="e.g., STOCK"
-                      />
-                    </div>
-
-                    <div style={styles.fieldGroup}>
-                      <label style={styles.label}>Market</label>
-                      <input
-                        style={styles.input}
-                        type="text"
-                        value={newAssetData.market}
-                        onChange={(e) =>
-                          setNewAssetData({
-                            ...newAssetData,
-                            market: e.target.value,
-                          })
-                        }
-                        placeholder="e.g., US"
-                      />
-                    </div>
-                  </div>
-
-                  <div style={styles.modalActions}>
-                    <button
-                      type="button"
-                      style={styles.primaryBtn}
-                      disabled={creatingAsset}
-                      onClick={handleCreateAsset}
-                    >
-                      {creatingAsset ? "Creating..." : "Create Asset"}
-                    </button>
-                    <button
-                      type="button"
-                      style={styles.secondaryBtn}
-                      onClick={() => setShowCreateAssetForm(false)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Account</label>
+                  <input
+                    style={styles.input}
+                    name="accountName"
+                    value={formData.accountName}
+                    onChange={handleFormChange}
+                    placeholder="Main Account"
+                  />
                 </div>
               </div>
-            </div>
-          )}
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Notes</label>
+                <textarea
+                  style={styles.textarea}
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleFormChange}
+                  placeholder="Add any notes..."
+                />
+              </div>
+
+              <div style={styles.modalActions}>
+                <button
+                  type="button"
+                  style={styles.primaryBtn}
+                  disabled={submitting}
+                  onClick={handleSubmitForm}
+                >
+                  {submitting ? "Saving..." : "Save"}
+                </button>
+                <button
+                  type="button"
+                  style={styles.secondaryBtn}
+                  onClick={closeFormModal}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
+
+      {showCreateAssetForm && (
+        <div
+          style={styles.modalOverlay}
+          onClick={() => setShowCreateAssetForm(false)}
+        >
+          <div
+            style={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>Create New Asset</h3>
+              <button
+                type="button"
+                style={styles.modalCloseBtn}
+                onClick={() => setShowCreateAssetForm(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={styles.modalForm}>
+              <div style={styles.formGrid}>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Symbol *</label>
+                  <input
+                    style={styles.input}
+                    type="text"
+                    value={newAssetData.symbol}
+                    onChange={(e) =>
+                      setNewAssetData((prev) => ({
+                        ...prev,
+                        symbol: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    placeholder="e.g. AAPL"
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Name *</label>
+                  <input
+                    style={styles.input}
+                    type="text"
+                    value={newAssetData.name}
+                    onChange={(e) =>
+                      setNewAssetData((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. Apple Inc."
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Asset Type *</label>
+                  <input
+                    style={styles.input}
+                    type="text"
+                    value={newAssetData.assetType}
+                    onChange={(e) =>
+                      setNewAssetData((prev) => ({
+                        ...prev,
+                        assetType: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. STOCK"
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Market</label>
+                  <input
+                    style={styles.input}
+                    type="text"
+                    value={newAssetData.market}
+                    onChange={(e) =>
+                      setNewAssetData((prev) => ({
+                        ...prev,
+                        market: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. US"
+                  />
+                </div>
+              </div>
+
+              <div style={styles.modalActions}>
+                <button
+                  type="button"
+                  style={styles.primaryBtn}
+                  disabled={creatingAsset}
+                  onClick={handleCreateAsset}
+                >
+                  {creatingAsset ? "Creating..." : "Create Asset"}
+                </button>
+                <button
+                  type="button"
+                  style={styles.secondaryBtn}
+                  onClick={() => setShowCreateAssetForm(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1083,63 +1028,113 @@ const styles = {
   page: {
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
-    position: "relative",
+    gap: "18px",
+    color: "#e2e8f0",
   },
 
-  header: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "16px",
-    padding: "18px 22px",
-    color: "#e2e8f0",
-    fontSize: "28px",
+  hero: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: "24px",
+    padding: "8px 0 16px",
+    borderBottom: "1px solid rgba(148,163,184,0.18)",
+    flexWrap: "wrap",
+  },
+
+  overline: {
+    fontSize: "12px",
+    letterSpacing: "0.12em",
+    color: "#60a5fa",
     fontWeight: 700,
+    marginBottom: "6px",
+  },
+
+  pageTitle: {
+    margin: 0,
+    fontSize: "36px",
+    lineHeight: 1.05,
+    fontWeight: 700,
+    color: "#f8fafc",
+  },
+
+  pageSubtitle: {
+    margin: "8px 0 0",
+    color: "#94a3b8",
+    fontSize: "14px",
+    maxWidth: "720px",
+    lineHeight: 1.6,
+  },
+
+  heroActions: {
+    display: "flex",
+    gap: "12px",
+    flexWrap: "wrap",
   },
 
   error: {
-    color: "#ef4444",
+    color: "#fca5a5",
     fontSize: "14px",
+    padding: "10px 0",
+    borderTop: "1px solid rgba(239,68,68,0.28)",
+    borderBottom: "1px solid rgba(239,68,68,0.28)",
   },
 
-  layout: {
-    display: "grid",
-    gridTemplateColumns: "240px 1fr",
-    gap: "20px",
-  },
-
-  filterPanel: {
+  filtersSection: {
     background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "20px",
+    borderTop: "1px solid #334155",
+    borderBottom: "1px solid #334155",
+  },
+
+  sectionBar: {
     display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    minHeight: "auto",
-    maxHeight: "500px",
-    overflowY: "auto",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    padding: "12px 0",
+    borderBottom: "1px solid #334155",
   },
 
   sectionTitle: {
     margin: 0,
-    marginBottom: "10px",
-    color: "#e2e8f0",
-    fontSize: "18px",
+    fontSize: "16px",
     fontWeight: 700,
+    color: "#f8fafc",
+  },
+
+  sectionMeta: {
+    fontSize: "12px",
+    color: "#94a3b8",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+  },
+
+  filtersGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: "14px",
+    padding: "14px 0 16px",
+  },
+
+  fieldGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    minWidth: 0,
   },
 
   label: {
-    fontSize: "13px",
+    fontSize: "12px",
     color: "#94a3b8",
-    marginTop: "8px",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
   },
 
   input: {
     background: "#0f172a",
     border: "1px solid #334155",
-    borderRadius: "12px",
-    padding: "10px 12px",
+    borderRadius: "0",
+    padding: "11px 12px",
     color: "#e2e8f0",
     outline: "none",
   },
@@ -1147,25 +1142,18 @@ const styles = {
   textarea: {
     background: "#0f172a",
     border: "1px solid #334155",
-    borderRadius: "12px",
-    padding: "10px 12px",
+    borderRadius: "0",
+    padding: "11px 12px",
     color: "#e2e8f0",
     outline: "none",
-    minHeight: "100px",
+    minHeight: "96px",
     resize: "vertical",
   },
 
-  mainColumn: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-
-  tableCard: {
+  tableSection: {
     background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "20px",
+    borderTop: "1px solid #334155",
+    borderBottom: "1px solid #334155",
   },
 
   tableWrapper: {
@@ -1179,73 +1167,260 @@ const styles = {
 
   th: {
     textAlign: "left",
-    padding: "14px",
-    fontSize: "13px",
+    padding: "12px 14px",
+    fontSize: "11px",
     color: "#94a3b8",
     borderBottom: "1px solid #334155",
-    fontWeight: 500,
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+  },
+
+  thActions: {
+    textAlign: "right",
+    padding: "12px 14px",
+    fontSize: "11px",
+    color: "#94a3b8",
+    borderBottom: "1px solid #334155",
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
   },
 
   td: {
-    padding: "14px",
+    padding: "12px 14px",
     borderBottom: "1px solid #273449",
     color: "#e2e8f0",
-    fontSize: "14px",
+    fontSize: "13px",
+    whiteSpace: "nowrap",
   },
 
-  bottomGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "20px",
+  tdSymbol: {
+    padding: "12px 14px",
+    borderBottom: "1px solid #273449",
+    color: "#3b82f6",
+    fontWeight: 700,
+    fontSize: "13px",
+    whiteSpace: "nowrap",
   },
 
-  detailCard: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "20px",
-    minHeight: "250px",
-    maxHeight: "600px",
-    overflowY: "auto",
+  tdActions: {
+    padding: "10px 14px",
+    borderBottom: "1px solid #273449",
+    textAlign: "right",
+    whiteSpace: "nowrap",
   },
 
-  actionCard: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "20px",
-    minHeight: "auto",
+  tableRow: {
+    transition: "background 0.15s ease",
+  },
+
+  detailCell: {
+    padding: 0,
+    borderBottom: "1px solid #334155",
+    background: "#162132",
+  },
+
+  detailLoading: {
+    padding: "18px 16px",
+    color: "#94a3b8",
+    fontSize: "13px",
+  },
+
+  detailPanel: {
+    padding: "16px",
+  },
+
+  detailHeader: {
     display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    zIndex: 10,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "16px",
+    paddingBottom: "14px",
+    borderBottom: "1px solid #334155",
+    marginBottom: "14px",
+    flexWrap: "wrap",
   },
 
-  formCard: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "20px",
+  detailTitle: {
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#f8fafc",
   },
 
-  detailList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-  },
-
-  detailRow: {
-    display: "grid",
-    gridTemplateColumns: "160px 1fr",
-    color: "#e2e8f0",
-    fontSize: "14px",
-  },
-
-  detailKey: {
+  detailSubtitle: {
+    marginTop: "4px",
+    fontSize: "12px",
     color: "#94a3b8",
   },
 
-  form: {
+  detailHeaderStats: {
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+  },
+
+  detailStat: {
+    fontSize: "12px",
+    color: "#cbd5e1",
+    border: "1px solid #334155",
+    padding: "6px 8px",
+  },
+
+  detailGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: "12px 16px",
+  },
+
+  detailItem: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    minWidth: 0,
+  },
+
+  detailItemWide: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    gridColumn: "span 2",
+    minWidth: 0,
+  },
+
+  detailKey: {
+    fontSize: "11px",
+    color: "#94a3b8",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+  },
+
+  detailValue: {
+    fontSize: "14px",
+    color: "#e2e8f0",
+    lineHeight: 1.4,
+    wordBreak: "break-word",
+  },
+
+  primaryBtn: {
+    background: "#3b82f6",
+    color: "#fff",
+    border: "1px solid #3b82f6",
+    borderRadius: "0",
+    padding: "11px 16px",
+    fontSize: "13px",
+    cursor: "pointer",
+    fontWeight: 700,
+  },
+
+  secondaryBtnCompact: {
+    background: "transparent",
+    color: "#e2e8f0",
+    border: "1px solid #334155",
+    borderRadius: "0",
+    padding: "11px 16px",
+    fontSize: "13px",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
+
+  secondaryBtn: {
+    background: "#0f172a",
+    color: "#e2e8f0",
+    border: "1px solid #334155",
+    borderRadius: "0",
+    padding: "11px 16px",
+    fontSize: "13px",
+    cursor: "pointer",
+    fontWeight: 600,
+    width: "100%",
+  },
+
+  rowGhostBtn: {
+    background: "transparent",
+    color: "#cbd5e1",
+    border: "1px solid #334155",
+    borderRadius: "0",
+    padding: "6px 10px",
+    fontSize: "12px",
+    cursor: "pointer",
+    fontWeight: 600,
+    marginRight: "8px",
+  },
+
+  rowDangerBtn: {
+    background: "transparent",
+    color: "#f87171",
+    border: "1px solid rgba(239,68,68,0.35)",
+    borderRadius: "0",
+    padding: "6px 10px",
+    fontSize: "12px",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
+
+  empty: {
+    color: "#94a3b8",
+    fontSize: "14px",
+    padding: "16px 0",
+  },
+
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0,0,0,0.62)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    padding: "20px",
+  },
+
+  modalContent: {
+    background: "#1e293b",
+    border: "1px solid #334155",
+    borderRadius: "0",
+    padding: "20px",
+    maxWidth: "760px",
+    width: "100%",
+    maxHeight: "88vh",
+    overflowY: "auto",
+    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.55)",
+  },
+
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "18px",
+    paddingBottom: "12px",
+    borderBottom: "1px solid #334155",
+  },
+
+  modalTitle: {
+    margin: 0,
+    color: "#e2e8f0",
+    fontSize: "18px",
+    fontWeight: 700,
+  },
+
+  modalCloseBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#94a3b8",
+    fontSize: "22px",
+    cursor: "pointer",
+    padding: 0,
+    width: "32px",
+    height: "32px",
+  },
+
+  modalForm: {
     display: "flex",
     flexDirection: "column",
     gap: "16px",
@@ -1257,116 +1432,11 @@ const styles = {
     gap: "16px",
   },
 
-  fieldGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-  },
-
-  formActions: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "8px",
-  },
-
-  primaryBtn: {
-    background: "#3b82f6",
-    color: "#fff",
-    border: "none",
-    borderRadius: "12px",
-    padding: "12px 16px",
-    fontSize: "14px",
-    cursor: "pointer",
-    fontWeight: 600,
-    transition: "all 0.2s ease",
-    width: "100%",
-    textAlign: "center",
-  },
-
-  secondaryBtn: {
-    background: "#0f172a",
-    color: "#e2e8f0",
-    border: "1px solid #334155",
-    borderRadius: "12px",
-    padding: "12px 16px",
-    fontSize: "14px",
-    cursor: "pointer",
-    fontWeight: 600,
-    transition: "all 0.2s ease",
-    width: "100%",
-    textAlign: "center",
-  },
-
-  empty: {
-    color: "#94a3b8",
-    fontSize: "14px",
-  },
-
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: "rgba(0, 0, 0, 0.6)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-  },
-
-  modalContent: {
-    background: "#1e293b",
-    border: "1px solid #334155",
-    borderRadius: "20px",
-    padding: "24px",
-    maxWidth: "500px",
-    width: "90%",
-    maxHeight: "85vh",
-    overflowY: "auto",
-    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.8)",
-  },
-
-  modalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "20px",
-  },
-
-  modalTitle: {
-    margin: 0,
-    color: "#e2e8f0",
-    fontSize: "20px",
-    fontWeight: 700,
-  },
-
-  modalCloseBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#94a3b8",
-    fontSize: "24px",
-    cursor: "pointer",
-    padding: "0",
-    width: "32px",
-    height: "32px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "color 0.2s ease",
-  },
-
-  modalForm: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  },
-
   modalActions: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: "12px",
-    marginTop: "20px",
+    marginTop: "8px",
   },
 
   assetSelector: {
@@ -1380,10 +1450,10 @@ const styles = {
     right: 0,
     background: "#0f172a",
     border: "1px solid #334155",
-    borderRadius: "12px",
+    borderRadius: "0",
     marginTop: "4px",
-    zIndex: 10,
-    maxHeight: "200px",
+    zIndex: 20,
+    maxHeight: "220px",
     overflowY: "auto",
   },
 
@@ -1392,23 +1462,28 @@ const styles = {
     color: "#e2e8f0",
     cursor: "pointer",
     borderBottom: "1px solid #273449",
-    transition: "background 0.2s ease",
+  },
+
+  dropdownEmpty: {
+    padding: "10px 12px",
+    color: "#94a3b8",
+    fontSize: "13px",
+    borderBottom: "1px solid #273449",
   },
 
   createAssetOption: {
     padding: "10px 12px",
-    color: "#3b82f6",
+    color: "#60a5fa",
     cursor: "pointer",
-    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    backgroundColor: "rgba(59,130,246,0.08)",
     fontWeight: 600,
-    fontSize: "14px",
-    transition: "all 0.2s ease",
+    fontSize: "13px",
   },
 
   selectedAsset: {
     marginTop: "8px",
-    fontSize: "13px",
-    color: "#3b82f6",
-    fontWeight: 500,
+    fontSize: "12px",
+    color: "#60a5fa",
+    fontWeight: 600,
   },
 };

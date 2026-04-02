@@ -9,22 +9,13 @@ import java.util.List;
 public interface HoldingService {
 
     PageResponse<HoldingDetailResponse> getSelectAllHoldings(HoldingQueryRequest request);
-
     List<HoldingDetailResponse> getAllHoldings();
-
     HoldingDetailResponse getDetailHoldingById(Long id);
-
     HoldingResponse getHoldingById(Long id);
-
     HoldingResponse createHolding(CreateHoldingRequest request);
-
-    HoldingResponse updateHolding(Long id, UpdateHoldingRequest request);
+    HoldingDetailResponse updateHolding(Long id, UpdateHoldingRequest request);
 
     void deleteHolding(Long id);
-
     void applyBuy(Long assetId, BigDecimal qty, BigDecimal price, BigDecimal fee, String accountName);
-
     void applySell(Long assetId, BigDecimal qty, BigDecimal price, BigDecimal fee, String accountName);
-
-
 }

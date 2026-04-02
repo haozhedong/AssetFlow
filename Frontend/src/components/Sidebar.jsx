@@ -4,7 +4,6 @@ const items = [
   { name: "Dashboard", path: "/" },
   { name: "Holdings", path: "/holdings" },
   { name: "Transactions", path: "/transactions" },
-  { name: "Analytics", path: "/analytics" },
   { name: "AI Insights", path: "/ai" },
 ];
 

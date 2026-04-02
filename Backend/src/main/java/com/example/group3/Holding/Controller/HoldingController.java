@@ -64,7 +64,7 @@ public class HoldingController {
 
     //更新对应ID的持仓信息
     @PutMapping("/{id}")
-    public HoldingResponse updateHolding(@PathVariable Long id,
+    public HoldingDetailResponse updateHolding(@PathVariable Long id,
                                          @Valid @RequestBody UpdateHoldingRequest request) {
         return holdingService.updateHolding(id, request);
     }
